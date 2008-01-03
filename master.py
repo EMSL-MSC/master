@@ -21,10 +21,10 @@ def addProperty(name,description):
     Create a new property type, with name and descripition.  
     Returns new status ID or None on Error"""
 
-def updateStatus(node,status,comment="",time="now"):
-    """updateStatus(node,status,comment,time) -> id
+def updateStatus(nodes,status,comment="",time="now"):
+    """updateStatus(nodes,status,comment,time) -> [id,...]
     
-    Change the status of a node.  
+    Change the status of a list of nodes.  
     Comments and time stamp are optional
     Returns timestamp of change, or None on error"""
 
@@ -32,35 +32,40 @@ def getCurrentStatus(nodes):
     """getCurrentStatus(nodes) -> [(nodeID,nodeName,statusID,statusName,timeStamp,comment),...]
     
     Retrieve the current status of a node or set of nodes
-    If there is a single node return info only for that node.
-    If the nodes parameter is a list, return data for every node in the list
+    The nodes parameter is a list of nodes to get status for
     """
 
-def getStatusHistory(node,startTime=None,endTime=None):
-    """getStatusHistory(node,startTime=None,endTime=None) -> [(statusID,statusName,timestamp,comment),...]
+def getStatusHistory(nodes,filter=None,startTime=None,endTime=None):
+    """getStatusHistory(nodes,filter=None,startTime=None,endTime=None) -> {'node1':[(statusID,statusName,timestamp,comment),...],'node2':...}
 
-    Retrieve a list of status changes in a time period
+    Retrieve a list of status changes in a time period for a list of nodes
+
+    filter - set of status id's or status names that are allowed to be returned
     """
 
 def updateProperty(node,property,propertyValue,comment="",time="now"):
     """updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
     
     Update a property value of a node.
-    property value is required.
+        nodes         - List of nodes to set the property on
+        property      - Property to change, id or name
+        propertyValue - value to change property to.
+        comment       - user comment on this change
+        time          - a timestamp for the change.  Defaults to 'now'
+    
     Returns timestamp of change, or None on error"""
 
-def getCurrentProperties(node,filter=None):
-    """getCurrentProperties(node,filter=None) -> [(propID,propName,value,timestamp,comment),...]
+def getCurrentProperties(nodes,filter=None):
+    """getCurrentProperties(nodes,filter=None) -> {'node':[(propID,propName,value,timestamp,comment),...],'node2':[...],...}
     
     Retrieve the current properties of the given node.
     a filter is a list of id's allowed (1,2,3,"eth0mac")
     Returns a list of tuples containing (propID,propName,value,timestamp,comment)
 
-    FIXME: should this take alist of nodes???
     """
 
-def getPropertyHistory(node,filter=None,startTime=None,endTime=None):
-    """getPropertyHistory(node,filter=None,startTime=None,endTime=None) -> [(propID,propName,value,timestamp,comment),...]
+def getPropertyHistory(nodes,filter=None,startTime=None,endTime=None):
+    """getPropertyHistory(nodes,filter=None,startTime=None,endTime=None) -> {'nodeid1':[(propID,propName,value,timestamp,comment),...],'nodeid2':[...],...}
     
     Retrieve all property change logs for a given period.
     If a time period is not specified returns all records.
