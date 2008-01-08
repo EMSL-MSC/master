@@ -1,4 +1,5 @@
 import SimpleXMLRPCServer
+import sys
 
 
 class MasterServerRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
@@ -36,7 +37,14 @@ class MasterXMLRPCServer(SimpleXMLRPCServer.SimpleXMLRPCServer):
 		SimpleXMLRPCServer.SimpleXMLRPCServer.serve_forever(self)
 
 	def _dispatch(self, method, params):
-		return SimpleXMLRPCServer.SimpleXMLRPCServer._dispatch(self,method,params)
+		try:
+			return SimpleXMLRPCServer.SimpleXMLRPCServer._dispatch(self,method,params)
+		except:
+			import traceback
+			etype, value, tb = sys.exc_info()
+			print "Exception Caught:\n%s%s" % ("".join(traceback.format_tb(tb)), traceback.format_exception_only(etype,value)[0]),
+			raise
 
 def rpc(func):
 	MasterXMLRPCServer.functions.append(func)
+	return func
