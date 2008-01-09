@@ -58,7 +58,7 @@ ALTER TABLE public.node_properties_log OWNER TO master;
 -- Name: node_properties; Type: VIEW; Schema: public; Owner: master
 --
 
-CREATE VIEW node_properties AS
+CREATE OR REPLACE VIEW node_properties AS
     SELECT npl.id, npl.node_id, npl.property_id, npl."time" AS last_change, npl.value, npl."comment" FROM node_properties_log npl, (SELECT node_properties_log.node_id, node_properties_log.property_id, max(node_properties_log."time") AS "time" FROM node_properties_log GROUP BY node_properties_log.node_id, node_properties_log.property_id) mr WHERE (((npl.node_id = mr.node_id) AND (npl.property_id = mr.property_id)) AND (npl."time" = mr."time"));
 
 
@@ -91,8 +91,8 @@ ALTER TABLE public.node_status_log OWNER TO master;
 -- Name: node_status; Type: VIEW; Schema: public; Owner: master
 --
 
-CREATE VIEW node_status AS
-    SELECT nsl.id, nsl.node_id, nsl.status_id, nsl."time" AS last_change, nsl."comment", nsl.user_id FROM node_status_log nsl, (SELECT node_status_log.node_id, node_status_log.status_id, max(node_status_log."time") AS "time" FROM node_status_log GROUP BY node_status_log.node_id, node_status_log.status_id) mr WHERE (((nsl.node_id = mr.node_id) AND (nsl.status_id = mr.status_id)) AND (nsl."time" = mr."time"));
+CREATE OR REPLACE VIEW node_status AS
+    SELECT nsl.id, nsl.node_id, nsl.status_id, nsl."time" AS last_change, nsl."comment", nsl.user_id FROM node_status_log nsl, (SELECT node_status_log.node_id, max(node_status_log."time") AS "time" FROM node_status_log GROUP BY node_status_log.node_id) mr WHERE ((nsl.node_id = mr.node_id) AND (nsl."time" = mr."time"));
 
 
 ALTER TABLE public.node_status OWNER TO master;
@@ -345,5 +345,4 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
-
 
