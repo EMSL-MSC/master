@@ -14,12 +14,32 @@ def addNode(name):
 	return False
 
 @mxs.rpc
+def getNodes(filter=False):
+    """getNodes(filter=False) -> ['name1','name2',...]
+
+    Get a list of nodes
+    filter - A filter on what names should be returned.
+
+    FIXME give filter example, kenny
+    """
+    return False
+
+@mxs.rpc
 def addStatus(name,description):
 	"""addStatus(name,description) -> id
 	
 	Create a new status type, with name and descripition.  
 	Returns new status ID or None on error"""
 	return False
+
+@mxs.rpc
+def getStatus(names=[]):
+    """getStatus(names=[]) -> {'name':'Description',...}
+
+    Get a list of statuses.
+    names - a list of status names, if list is empty return all statuses
+    """
+    return False
 
 @mxs.rpc
 def addProperty(name,description):
@@ -30,12 +50,30 @@ def addProperty(name,description):
 	return False
 
 @mxs.rpc
+def getProperties(names=[]):
+    """getProperties(names=[]) -> {'name':'Description',...}
+
+    Get a list of properties as a dictionary
+    names - a list of property names, if list is empty return all properties
+    """
+    return False
+
+@mxs.rpc
 def addUser(name,fullname):
     """addUser(name,fullname) -> id
 
     Add a user in the database.
     name - unique username, should match unix username such as 'efelix'
     fullname - Printable Name of the user such as 'Evan J. Felix'
+    """
+    return False
+
+@mxs.rpc
+def getUsers(names=[]):
+    """getUsers(names=[]) -> {'username':'fullname',...}
+
+    Get a list of users.  
+    names - a list of usernames, if list is empty return all users
     """
     return False
 
