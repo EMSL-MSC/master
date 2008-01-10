@@ -4,7 +4,7 @@ import xmlrpclib
 import errno
 import exceptions
 
-server_url = 'http://127.0.0.1:8000';
+server_url = 'http://127.0.0.1:627';
 server = xmlrpclib.Server(server_url);
 
 def try_call(function, args):

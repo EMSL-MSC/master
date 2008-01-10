@@ -28,7 +28,7 @@ class MasterXMLRPCServer(SimpleXMLRPCServer.SimpleXMLRPCServer):
 	functions = []
 	def __init__(self,addr,authFunction):
 		MasterServerRequestHandler.authFunction = authFunction
-		SimpleXMLRPCServer.SimpleXMLRPCServer.__init__(self,addr,MasterServerRequestHandler)
+		SimpleXMLRPCServer.SimpleXMLRPCServer.__init__(self,addr,MasterServerRequestHandler,0)
 		
 	def serve_forever(self):
 		for i in self.functions:
