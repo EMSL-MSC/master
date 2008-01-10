@@ -8,6 +8,7 @@ server_url = 'http://127.0.0.1:627';
 server = xmlrpclib.Server(server_url);
 
 def try_call(function, args):
+	retval = None
 	try:
 		retval = function(*args)
 
