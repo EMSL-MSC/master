@@ -63,7 +63,7 @@ def addStatus(name,desc = None):
 		return True
 	except pgdb.DatabaseError:
 		connection.rollback()
-		raise
+		return False
 
 
 @mxs.rpc
@@ -95,10 +95,10 @@ def addProperty(name,desc):
 		curs.execute("insert into property (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc})
 		connection.commit()
 		curs.close()
-		return id
+		return True
 	except pgdb.DatabaseError:
 		connection.rollback()
-		raise
+		return False
 
 @mxs.rpc
 def getProperties(names=False):
@@ -172,9 +172,8 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 		return True
 	except pgdb.DatabaseError:
 		connection.rollback()
-		raise
+		return False
 
-#TODO add user field
 @mxs.rpc
 def getCurrentStatus(nodes):
 	"""getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
@@ -192,7 +191,7 @@ def getCurrentStatus(nodes):
 		return retDict
 	except pgdb.DatabaseError, e:
 		connection.rollback()
-		raise
+		return False
 
 @mxs.rpc
 def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
@@ -221,7 +220,7 @@ def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'
 		return retDict
 	except pgdb.DatabaseError, e:
 		connection.rollback()
-		raise
+		return False
 
 @mxs.rpc
 def updateProperty(node,property,propertyValue,comment="",time="now"):
@@ -244,7 +243,7 @@ def updateProperty(node,property,propertyValue,comment="",time="now"):
 		return True
 	except pgdb.DatabaseError:
 		connection.rollback()
-		raise
+		return False
 
 @mxs.rpc
 def getCurrentProperties(nodes,filter=False):
@@ -275,7 +274,7 @@ def getCurrentProperties(nodes,filter=False):
 		return retVal
 	except pgdb.DatabaseError, e:
 		connection.rollback()
-		raise
+		return False
 
 @mxs.rpc
 def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
@@ -306,7 +305,7 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 		return retDict
 	except pgdb.DatabaseError:
 		connection.rollback()
-		raise
+		return False
 
 def authConnection(rh):
 	"Always allow localhost, only authenticate clients which are already inserted in the db"
