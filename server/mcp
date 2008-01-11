@@ -19,7 +19,7 @@ def addNode(name):
 	"""addNode(name) -> Boolean
 	
 	Create a new node. 
-	Returns new nodes unique ID or None on Error"""
+	Returns new nodes unique ID or False on Error"""
 	curs = connection.cursor()
 	try:
 		curs.execute("insert into node (name) values (%(name)s)", {"name":name})
@@ -50,8 +50,8 @@ def getNodes(filter=False):
 		return False
 
 @mxs.rpc
-def addStatus(name,desc = None):
-	"""addStatus(name,description) -> Boolean
+def addStatus(name,desc = ''):
+	"""addStatus(name,desc = '') -> Boolean
 	
 	Create a new status type, with name and descripition.  
 	Returns new status ID or None on error"""
@@ -85,8 +85,8 @@ def getStatus(names=False):
 		return False
 
 @mxs.rpc
-def addProperty(name,desc):
-	"""addProperty(name,description) -> Boolean
+def addProperty(name,desc = ''):
+	"""addProperty(name,desc = '') -> Boolean
 	
 	Create a new property type, with name and descripition.  
 	Returns new status ID or None on Error"""
@@ -136,7 +136,6 @@ def addUser(name,fullname):
 		connection.rollback()
 		return False
 
-#FIXME I may need to get a static time when "now" is passed
 @mxs.rpc
 def getUsers(names=False):
 	"""getUsers(names=[]) -> {'username':'fullname',...}
@@ -155,6 +154,7 @@ def getUsers(names=False):
 		connection.rollback()
 		return False
 
+#FIXME I may need to get a static time when "now" is passed
 @mxs.rpc
 def updateStatus(nodes,status,user,comment="",time="now"):
 	"""updateStatus(nodes,status,user,comment,time) -> Boolean
@@ -246,8 +246,8 @@ def updateProperty(node,property,propertyValue,comment="",time="now"):
 		return False
 
 @mxs.rpc
-def getCurrentProperties(nodes,filter=False):
-	"""getCurrentProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+def getProperties(nodes,filter=False):
+	"""getProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
 	
 	Retrieve the current properties of the given nodes.
 	a filter is a list of id's allowed ("eth0mac","eth1mac")
@@ -263,7 +263,7 @@ def getCurrentProperties(nodes,filter=False):
 				from node_properties, node, property 
 				where node_properties.node_id = node.id and node_properties.property_id = property.id
 				and node.name in %(nodes)s """ +
-				{True:"", False:"and property.name in %(filter)s"}[filter != False] +
+				{True:"", False:"and property.name in %(filter)s "}[filter == False] +
 				"order by last_change",
 				{"nodes":nodes, "filter":filter})
 		for i in curs.fetchall():
@@ -288,11 +288,11 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 	retDict = {}
 	curs = connection.cursor()
 	try:
-		curs.execute("""select node.name, property_id, p.name, last_change, comment 
-				from node_properties, node, property p where node.id = node_id and p.id = property_id 
-				and node.name in %(nodes)s and last_change between %(start)s and %(end)s """ +
+		curs.execute("""select node.name, property_id, p.name, time, comment 
+				from node_properties_log, node, property p where node.id = node_id and p.id = property_id 
+				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
 				{True:"", False:"and p.name in %(filter)s "}[filter == False] +
- 				"order by last_change",
+ 				"order by time",
 				{"nodes":nodes, "filter":filter, "start":startTime, "end":endTime})
 		for i in curs.fetchall():
 			try:
