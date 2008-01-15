@@ -3,15 +3,26 @@
 import xmlrpclib
 import errno
 import exceptions
+import pgdb
+import time
+import datetime
 
 server_url = 'http://127.0.0.1:627';
 server = xmlrpclib.Server(server_url);
 
-def try_call(function, args):
+def wipeDatabase(user,database):
+	conn = pgdb.connect(user=user, database=database)
+	for tbl in ("node_properties_log","node_status_log","node","property","status","users"):
+		curs = conn.cursor()
+		curs.execute("delete from "+tbl)
+		curs.close()
+		conn.commit()
+	return True
+
+def try_call(function, args, result):
 	retval = None
 	try:
 		retval = function(*args)
-
 	except xmlrpclib.ProtocolError, inst:
 		print "ProtocolError: - %s" % inst
 	except xmlrpclib.ResponseError, inst:
@@ -22,32 +33,46 @@ def try_call(function, args):
 		print "Unexpected error: %s" % inst
 		raise
 
-	if retval:
-		print "Success %s" % retval
+	str="%s(%s)"%(function._Method__name,args)
+	spcs = 100-len(str)
+	print str," "*spcs,
+	if retval == result:
+		print "Success: %s" % `retval`
+	elif type(retval) == type({}) and type(result) == type({}):
+		if result.keys() == retval.keys():
+			print "Success"
+		else:
+			print "Dictionary Failure",result,retval
 	else:
-		print "Error retval == None"
+		print "Error retval == %s" % `retval`
 
 	return retval
 
-try_call(server.master.addNode, ["n0"])
-try_call(server.master.addStatus, ["n0", "description"])
-try_call(server.master.addProperty, ["n0", "description"])
-try_call(server.master.addUser, ["AbooDaba", "Yoda"])
-try_call(server.master.updateStatus, ["n0", "bad", "AbooDaba","this job sucks","10 years from now"])
-try_call(server.master.updateStatus, ["n0", "bad", "AbooDaba","life is cruel for a tester"])
-try_call(server.master.updateStatus, ["n0", "bad", "AbooDaba"])
-try_call(server.master.getCurrentStatus, [["n0"]])
-try_call(server.master.getCurrentStatus, [["n0", "n1"]])
-try_call(server.master.getCurrentStatus, [["n0", "Id0n73xC157"]])
-try_call(server.master.getStatusHistory, [["n0", "n1"]])
-try_call(server.master.getStatusHistory, [["n0"], False, "now", "infinity"])
-try_call(server.master.getStatusHistory, [["n0"], ("n0"), "Wed Jan  9 15:41:52 PST 2008", "now"])
-try_call(server.master.getStatusHistory, [["n0"], ("booboobear"), "Wed Jan  9 15:41:52 PST 2008", "-infinity"])
-try_call(server.master.updateProperty, [["n0"], "LogicalThinking", "-1"])
-try_call(server.master.updateProperty, [["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"])
-try_call(server.master.getCurrentProperties, [["n0", "n0"]])
-try_call(server.master.getCurrentProperties, [["n0"], ["LogicalThinking"]])
-try_call(server.master.getPropertyHistory, [["n0", "n0"], False, "10 days ago", "now"])
-try_call(server.master.getPropertyHistory, [["n0", "n1"], False, "now", "10 days ago"])
-try_call(server.master.getPropertyHistory, [["n0", "n1"], ["n0"], "now", "10 days ago"])
-try_call(server.master.getPropertyHistory, [["n0", "n0"], ["n0"]])
+wipeDatabase("master","master")
+now = datetime.datetime.fromtimestamp(server.master.serverTime())
+tendaysago = time.mktime((now - datetime.timedelta(-10)).timetuple())
+tendaysfromnow = time.mktime((now - datetime.timedelta(10)).timetuple())
+
+try_call(server.master.addNode, ["n0"], True)
+try_call(server.master.addStatus, ["bad", "Things are Bad"],True)
+try_call(server.master.addProperty, ["LogicalThinking", "Something that happens to Evan once a day"],True)
+try_call(server.master.addUser, ["AbooDaba", "Yoda"],True)
+try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba","this job sucks","10 years from now"],False)
+try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba","life is cruel for a tester"],True)
+try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba"],True)
+try_call(server.master.getCurrentStatus, [["n0"]],{'n0':0})
+try_call(server.master.getCurrentStatus, [["n0", "n1"]],{'n0':0})
+try_call(server.master.getCurrentStatus, [["CRAP!", "Id0n73xC157"]],{})
+try_call(server.master.getStatusHistory, [["n0", "n1"]],{'n0':0})
+time.sleep(2)
+try_call(server.master.getStatusHistory, [["n0"], False, "now", "infinity"],{})
+try_call(server.master.getStatusHistory, [["n0"], ["bad"], 1200000000, "now"],{'n0':0})
+try_call(server.master.getStatusHistory, [["n0"], ["booboobear"], 1200000000, "-infinity"],{})
+try_call(server.master.updateProperty, [["n0"], "LogicalThinking", "-1"], True)
+try_call(server.master.updateProperty, [["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"], False)
+try_call(server.master.getProperties, [["n0", "n0"]],{'n0':0})
+try_call(server.master.getProperties, [["n0"], ["LogicalThinking"]],{'n0':0})
+try_call(server.master.getPropertyHistory, [["n0", "n0"], False, tendaysago, 'now'],{'n0':1})
+try_call(server.master.getPropertyHistory, [["n0", "n1"], False, "now", tendaysfromnow],False)
+try_call(server.master.getPropertyHistory, [["n0", "n1"], ["n0"], "now", tendaysfromnow],False)
+try_call(server.master.getPropertyHistory, [["n0", "n0"], ["n0"]],True)

@@ -158,12 +158,12 @@ def getUsers(names=False):
 #FIXME I may need to get a static time when "now" is passed
 @mxs.rpc
 def updateStatus(nodes,status,user,comment="",time="now"):
-	"""updateStatus(nodes,status,user,comment,time) -> Boolean
+	"""updateStatus(nodes,status,user,comment,timeistamp) -> Boolean
 	
 	Change the status of a list of nodes.  
-	Comments and time stamp are optional
-	Returns True on success
-	Returns timestamp of change, or None on error"""
+	Comments and timestamp are optional
+	Returns True on success, False on Error
+	"""
 	retVal = []
 	curs = connection.cursor()
 	try:
@@ -181,6 +181,7 @@ def getCurrentStatus(nodes):
 	
 	Retrieve the current status of a node or set of nodes
 	The nodes parameter is a list of nodes to get status for
+	Timestamps are a POSIX timestamp
 	"""
 	retDict = {}
 	curs = connection.cursor()
@@ -199,9 +200,12 @@ def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'
 	"""getStatusHistory(nodes,filter=false,startTime=-infinity,endTime=inifinity) -> {'node1':[(statusName,timestamp,user,comment),...],'node2':...}
 
 	Retrieve a ordered list of status changes in a time period for a list of nodes
+	Nodes that are not in the system will be silently ignored.
 
-	filter - set of status id's or status names that are allowed to be returned
-	*Time - Date & Time for start and end of data requested
+	filter - set of status names that are allowed to be returned
+	*Time - Date & Time for start and end of data requested.  
+	
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
 	"""
 	retDict = {}
 	curs = connection.cursor()
@@ -234,7 +238,10 @@ def updateProperty(node,property,propertyValue,comment="",time="now"):
 		comment		- user comment on this change
 		time		- a timestamp for the change.  Defaults to 'now'
 	
-		Returns timestamp of change, or None on error"""
+	Returns timestamp of change, or None on error
+		
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
+	"""
 	retVal = []
 	curs = connection.cursor()
 	try:
@@ -253,6 +260,7 @@ def getProperties(nodes,filter=False):
 	Retrieve the current properties of the given nodes.
 	a filter is a list of id's allowed ("eth0mac","eth1mac")
 	Returns a dictionary of tuples containing (propName,value,timestamp,comment)
+	Timestamps are a POSIX timestamp
 	"""
 
 	retVal = {}
@@ -283,8 +291,10 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 	
 	Retrieve all property change logs for a given period.
 	If a time period is not specified returns all records.
-	a filter is a list of id's allowed (1,2,3,"eth0mac")
-	Returns a dictionary list of tuples containing (propName,value,timestamp,comment)
+	
+	filter is a list of property names allowed ("eth0mac","eth1mac")
+	*Time - Date & Time for start and end of data requested
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
 	"""
 	retDict = {}
 	curs = connection.cursor()
@@ -307,6 +317,20 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 	except pgdb.DatabaseError:
 		connection.rollback()
 		return False
+
+@mxs.rpc
+def serverTime():
+	"""serverTime -> float
+
+	returns the current time of the server as a POSIX timestamp
+	"""
+
+	curs = connection.cursor()
+	curs.execute("select extract(epoch from now())")
+	result = curs.fetchone()
+
+	return result[0]
+
 
 def authConnection(rh):
 	"Always allow localhost, only authenticate clients which are already inserted in the db"
