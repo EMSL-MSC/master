@@ -9,6 +9,7 @@ import socket
 import pwd
 import masterXMLRPCServer as mxs
 import pgdb
+import getopt
 
 debug = False
 
@@ -348,6 +349,12 @@ def daemonize(user = None, group = None):
 def main():
 	"""Function to start up the server and serve the pages till the end of time."""
 	global connection
+	global debug
+
+	optlist,args = getopt.getopt(sys.argv[1:],'d')
+	for (arg,val) in optlist:
+		if arg == '-d':
+			debug=1
 
 	if not debug:
 		daemonize()
