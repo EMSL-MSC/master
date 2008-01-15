@@ -50,8 +50,8 @@ def try_call(function, args, result):
 
 wipeDatabase("master","master")
 now = datetime.datetime.fromtimestamp(server.master.serverTime())
-tendaysago = time.mktime((now - datetime.timedelta(-10)).timetuple())
-tendaysfromnow = time.mktime((now - datetime.timedelta(10)).timetuple())
+tendaysago = int(time.mktime((now - datetime.timedelta(-10)).timetuple()))
+tendaysfromnow = int(time.mktime((now - datetime.timedelta(10)).timetuple()))
 
 try_call(server.master.addNode, ["n0"], True)
 try_call(server.master.addStatus, ["bad", "Things are Bad"],True)
