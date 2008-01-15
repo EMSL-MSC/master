@@ -10,10 +10,17 @@ import pwd
 import masterXMLRPCServer as mxs
 import pgdb
 import getopt
+from time import *
 
 debug = False
 
 connection=None
+
+def epochTo8601(epoch):
+	try:
+		return strftime("%F %T", localtime(epoch))
+	except TypeError:
+		return epoch
 
 @mxs.rpc
 def addNode(name):
@@ -167,7 +174,7 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 	retVal = []
 	curs = connection.cursor()
 	try:
-		curs.executemany("insert into node_status_log (node_id, status_id, time, comment, user_id) values ((select id from node where name = %(node)s), (select id from status where name = %(status)s), %(time)s, %(comment)s, (select id from users where username = %(user)s))", [{"node":i, "status":status, "time":time, "comment":comment, "user":user} for i in nodes])
+		curs.executemany("insert into node_status_log (node_id, status_id, time, comment, user_id) values ((select id from node where name = %(node)s), (select id from status where name = %(status)s), %(time)s, %(comment)s, (select id from users where username = %(user)s))", [{"node":i, "status":status, "time":epochTo8601(time), "comment":comment, "user":user} for i in nodes])
 		connection.commit()
 		curs.close()
 		return True
@@ -187,7 +194,7 @@ def getCurrentStatus(nodes):
 	curs = connection.cursor()
 	try:
 #should I use subqueries for these views?
-		curs.execute("select node.name, status.name, last_change, users.username, comment from node_status, node, status, users where node_status.node_id = node.id and node_status.status_id = status.id and users.id = user_id and node.name in %(nodes)s", {"nodes":nodes})
+		curs.execute("select node.name, status.name, extract(epoch from last_change)::int4, users.username, comment from node_status, node, status, users where node_status.node_id = node.id and node_status.status_id = status.id and users.id = user_id and node.name in %(nodes)s", {"nodes":nodes})
 		for i in curs.fetchall():
 			retDict[i[0]] = i[1:]
 		return retDict
@@ -210,13 +217,13 @@ def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'
 	retDict = {}
 	curs = connection.cursor()
 	try:
-		sql = ("""select node.name, s.name, time, users.username, comment 
+		sql = ("""select node.name, s.name, extract(epoch from time), users.username, comment 
 				from node_status_log, node, status s, users
 				where node.id = node_id and s.id = status_id and users.id = user_id
 				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
 				{True:"", False:"and s.name in %(status)s "}[filter == False] +
  				"order by time")
-		curs.execute(sql, 		{"nodes":nodes, "status":filter, "start":startTime, "end":endTime})
+		curs.execute(sql, 		{"nodes":nodes, "status":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)})
 		for i in curs.fetchall():
 			try:
 				retDict[i[0]] += [i[1:]]
@@ -245,7 +252,7 @@ def updateProperty(node,property,propertyValue,comment="",time="now"):
 	retVal = []
 	curs = connection.cursor()
 	try:
-		curs.execute("insert into node_properties_log (node_id, property_id, time, value, comment) values ((select id from node where name = %(node)s), (select id from property where name = %(property)s), %(time)s, %(propertyValue)s, %(comment)s)", {"node":node, "property":property, "time":time, "propertyValue":propertyValue, "comment":comment})
+		curs.execute("insert into node_properties_log (node_id, property_id, time, value, comment) values ((select id from node where name = %(node)s), (select id from property where name = %(property)s), %(time)s, %(propertyValue)s, %(comment)s)", {"node":node, "property":property, "time":epochTo8601(time), "propertyValue":propertyValue, "comment":comment})
 		connection.commit()
 		curs.close()
 		return True
@@ -268,7 +275,7 @@ def getProperties(nodes,filter=False):
 	if type(filter) == type(""):
 		filter = [filter]
 	try:
-		curs.execute("""select node.name, property_id, property.name, value, last_change, comment 
+		curs.execute("""select node.name, property_id, property.name, value, extract(epoch from last_change)::int4, comment 
 				from node_properties, node, property 
 				where node_properties.node_id = node.id and node_properties.property_id = property.id
 				and node.name in %(nodes)s """ +
@@ -299,12 +306,12 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 	retDict = {}
 	curs = connection.cursor()
 	try:
-		curs.execute("""select node.name, property_id, p.name, time, comment 
+		curs.execute("""select node.name, property_id, p.name, extract(epoch from time)::int4, comment 
 				from node_properties_log, node, property p where node.id = node_id and p.id = property_id 
 				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
 				{True:"", False:"and p.name in %(filter)s "}[filter == False] +
  				"order by time",
-				{"nodes":nodes, "filter":filter, "start":startTime, "end":endTime})
+				{"nodes":nodes, "filter":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)})
 		for i in curs.fetchall():
 			try:
 				retDict[i[0]] += [i[1:]]
@@ -326,7 +333,7 @@ def serverTime():
 	"""
 
 	curs = connection.cursor()
-	curs.execute("select extract(epoch from now())")
+	curs.execute("select extract(epoch from now())::int4")
 	result = curs.fetchone()
 
 	return result[0]
