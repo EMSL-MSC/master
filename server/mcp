@@ -205,7 +205,7 @@ def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'
 	filter - set of status names that are allowed to be returned
 	*Time - Date & Time for start and end of data requested.  
 	
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
 	"""
 	retDict = {}
 	curs = connection.cursor()
@@ -240,7 +240,7 @@ def updateProperty(node,property,propertyValue,comment="",time="now"):
 	
 	Returns timestamp of change, or None on error
 		
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
 	"""
 	retVal = []
 	curs = connection.cursor()
@@ -294,7 +294,7 @@ def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinit
 	
 	filter is a list of property names allowed ("eth0mac","eth1mac")
 	*Time - Date & Time for start and end of data requested
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a float representing a POSIX timestamp
+	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
 	"""
 	retDict = {}
 	curs = connection.cursor()
