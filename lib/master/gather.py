@@ -1,5 +1,11 @@
 #!/usr/bin/python
-"""A library of hardware gathering functions"""
+"""
+A library of hardware gathering functions
+
+FIXMES:
+	dont hardcode paths, but put in a config?
+
+"""
 
 import os
 
@@ -41,38 +47,88 @@ def getAllMAC():
 		d.update(getMAC(x))
 	return d
 
+def _getSGdevice(scsi_id):
+	"""_getSGdevice(scsi_id) => string
+	device - chan:target:id:lun string from
+	"""
 
-_scsibase="/sys/class/scsi_disk/"
-def getScsiInfo(device):
-	"""getScsiInfo(device) => dictionary
+	if not os.access("/usr/bin/sg_map",os.X_OK):
+		_debug("failed to access sg_map or sg_inq")
+		return {}
 
-	device - chan:target:id:lun string from /sys/class/scsi_disk/
+	if not _getSGdevice.sg_map:
+		_getSGdevice.sg_map={}
+		p = os.popen("/usr/bin/sg_map -sd -x","r")
+		lines = p.readlines()
+		for line in lines:
+			(sg,c,t,i,l,t,dev) = line.split()
+			key=":".join((c,t,i,l))
+			_getSGdevice.sg_map[key]=dev
+	
+	return _getSGdevice.sg_map[scsi_id]
+
+
+
+def doLineParse(lines,prefix,map):
+	"""doLineParse(lines,prefix,map) => dictionary
+
+	parse out lines with colons ':' specifying the fields
+	lines - list of lines.
+	prefix - what to append the keys in the dictionary with.
+	map - dictionary map of what will be on each line before the :, and what it maps to in the returned dictionary
+
+	all lines not recognized are ignored, and if no lines are recognized the function returns an empty dictionary
+
+	example:
+	    lines = ["Fun Number:  42\n","Funnyer Number: 8008"]
+		map = {""Fun Number":"fun", "Funnyer Number":"funnyer"}
+		prefix = "super"
+		Return Value: {'super.fun':'42','super.funnyer':'8008'}
+	"""
+
+	infos={}
+	for line in lines:
+		if line.find(":")>0:
+			(first,second) = line.split(':',1)
+			if first in map.keys():
+				infos[prefix+"."+map[first]]=second.strip()
+
+	return infos
+
+
+_getSGdevice.sg_map=None
+
+def getScsiInfo(scsi_id):
+	"""getScsiInfo(scsi_id) => dictionary
+
+	scsi_id - chan:target:id:lun string from /sys/class/scsi_disk/
 	Retrieve model number, serial number and firmware revision of a scsi device
 	"""
-	dir=_scsibase+device
-	if not os.access(dir,os.X_OK):
-		_debug("error reading:"+dir)
-		return {}
-	
-	#Find the block device...  its kinda hackish... is there a better way
-	#FIXME figure out a gooder way?
-	l = os.listdir(dir):
-	block=None
-	for i in l:
-		if i.find("block:")==0:
-			block = i
-			break
-	
-	if not block:
-		_debug("error finding block in list")
+	mymap = { ' Vendor identification':'vendor',
+			  ' Product identification':'model',
+			  ' Product revision level':'fwver',
+			  ' Unit serial number':'serial'
+			  }
+
+	smartmap = { 	'Device Model':'model',
+				 	'Firmware Version':'fwver',
+					'Serial Number':'serial'
+				}
+
+	if not os.access("/usr/bin/sg_inq",os.X_OK):
+		_debug("failed to access sg_map or sg_inq")
 		return {}
 
-	dev = '/dev/'+block.split(':')[2]
-	if not os.access(dev,os.R_OK|os.W_OK):
-		_debug("Error on access for "+dev)
-		return {}
-	
-	
+	dev = _getSGdevice(scsi_id)
+	prefix="scsi."+scsi_id
+	p = os.popen("/usr/bin/sg_inq "+dev,"r")
+	infos = doLineParse(p.readlines(),prefix,mymap)
+
+	if infos.has_key(prefix+'.vendor') and infos[prefix+'.vendor']=='ATA' and os.access("/usr/sbin/smartctl",os.X_OK):
+		p = os.popen("/usr/sbin/smartctl -i "+dev,"r")
+		infos.update(doLineParse(p.readlines(),prefix,smartmap))
+
+	return infos
 
 def getAllScsiInfo():
 	"""getAllScsiInfo() => dictionary
@@ -80,7 +136,7 @@ def getAllScsiInfo():
 	retrive all information for scsi disks
 	"""
 	
-	scsis = os.listdir(_scsibase)
+	scsis = os.listdir("/sys/class/scsi_disk/")
 	d = {}
 	for x in scsis: 
 		d.update(getScsiInfo(x))
@@ -98,7 +154,9 @@ def _test():
 	d.update(getAllMAC())
 	d.update(getAllScsiInfo())
 
-	for key in d.keys():
+	keys = d.keys()
+	keys.sort()
+	for key in keys:
 		print key," => ",d[key]
 
 
