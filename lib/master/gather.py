@@ -135,7 +135,10 @@ def getAllScsiInfo():
 
 	retrive all information for scsi disks
 	"""
-	
+
+	if not os.access("/sys/class/scsi_disk/",os.F_OK):
+		_debug("failed to access /sys/class/scsi_disk/")
+		return {}
 	scsis = os.listdir("/sys/class/scsi_disk/")
 	d = {}
 	for x in scsis: 
