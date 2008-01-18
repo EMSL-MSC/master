@@ -61,11 +61,15 @@ def _getSGdevice(scsi_id):
 		p = os.popen("/usr/bin/sg_map -sd -x","r")
 		lines = p.readlines()
 		for line in lines:
-			(sg,c,t,i,l,t,dev) = line.split()
-			key=":".join((c,t,i,l))
-			_getSGdevice.sg_map[key]=dev
-	
-	return _getSGdevice.sg_map[scsi_id]
+			parts = line.split()
+			if len(parts) == 7:
+				(sg,c,t,i,l,t,dev)=parts
+				key=":".join((c,t,i,l))
+				_getSGdevice.sg_map[key]=dev
+	try:
+		return _getSGdevice.sg_map[scsi_id]
+	except KeyError:
+		return None
 
 
 
@@ -120,6 +124,9 @@ def getScsiInfo(scsi_id):
 		return {}
 
 	dev = _getSGdevice(scsi_id)
+	if not dev:
+		 _debug("Failed to find a device for "+scsi_id)
+		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
 	infos = doLineParse(p.readlines(),prefix,mymap)
@@ -136,10 +143,10 @@ def getAllScsiInfo():
 	retrive all information for scsi disks
 	"""
 
-	if not os.access("/sys/class/scsi_disk/",os.F_OK):
-		_debug("failed to access /sys/class/scsi_disk/")
+	if not os.access("/sys/class/scsi_device/",os.F_OK):
+		_debug("failed to access /sys/class/scsi_device/")
 		return {}
-	scsis = os.listdir("/sys/class/scsi_disk/")
+	scsis = os.listdir("/sys/class/scsi_device/")
 	d = {}
 	for x in scsis: 
 		d.update(getScsiInfo(x))
