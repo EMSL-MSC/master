@@ -1,0 +1,14 @@
+To setup a local server:
+
+1. install postgresql
+2. create database as postgres user
+    createuser -P master
+       * No password no special privledges
+
+    createdb -O master master
+3. fix pg_hba.conf
+      local   all         master                               trust
+4. Reload the database configs
+5. Load the database as the master user
+    psql master -U master < server/master.sql 
+
