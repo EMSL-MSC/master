@@ -63,7 +63,7 @@ def _getSGdevice(scsi_id):
 		for line in lines:
 			parts = line.split()
 			if len(parts) == 7:
-				(sg,c,t,i,l,t,dev)=parts
+				(sg,c,t,i,l,type,dev)=parts
 				key=":".join((c,t,i,l))
 				_getSGdevice.sg_map[key]=dev
 	try:
@@ -125,7 +125,7 @@ def getScsiInfo(scsi_id):
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 _debug("Failed to find a device for "+scsi_id)
+		 _debug("Failed to find a device for "+scsi_id+"\n"+`_getSGdevice.sg_map`)
 		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
@@ -142,15 +142,34 @@ def getAllScsiInfo():
 
 	retrive all information for scsi disks
 	"""
+	return _callOnDirList("/sys/class/scsi_device/",getScsiInfo)
 
-	if not os.access("/sys/class/scsi_device/",os.F_OK):
-		_debug("failed to access /sys/class/scsi_device/")
+def _callOnDirList(dir,func):
+	"""call a function on every file in a directory"""
+
+	if not os.access(dir,os.F_OK):
+		_debug("failed to access "+dir)
 		return {}
-	scsis = os.listdir("/sys/class/scsi_device/")
+	entries = os.listdir(dir)
 	d = {}
-	for x in scsis: 
-		d.update(getScsiInfo(x))
+	for x in entries: 
+		d.update(func(x))
 	return d
+
+_ibbase="/sys/class/infiniband/"
+_ib="infiniband."
+def getIBInfo(id):
+	"""retrieve information about a specific IB card"""
+	togather = [("fw_ver","fwver"),("node_guid","guid"),("hca_type","type")]
+	d={}
+	for (file,key) in togather:
+		if os.access(_ibbase,os.R_OK): 
+			d[ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
+	return d
+
+def getAllIBInfo():
+	"""Gather all IB card info"""
+	return _callOnDirList(_ibbase,getIBInfo)
 
 
 def _test():
