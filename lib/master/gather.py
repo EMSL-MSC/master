@@ -8,6 +8,8 @@ FIXMES:
 """
 
 import os
+import csv
+import dell
 
 def _debug(msg):
 	pass
@@ -42,9 +44,12 @@ def getAllMAC():
 	"""
 
 	ints = os.listdir("/sys/class/net/")
+
 	d = {}
 	for x in ints: 
-		d.update(getMAC(x))
+		# dont scan loopback or ipv6 over ipv4 interface
+		if not x in ("lo","sit0"):
+			d.update(getMAC(x))
 	return d
 
 def _getSGdevice(scsi_id):
@@ -84,7 +89,7 @@ def doLineParse(lines,prefix,map):
 	all lines not recognized are ignored, and if no lines are recognized the function returns an empty dictionary
 
 	example:
-	    lines = ["Fun Number:  42\n","Funnyer Number: 8008"]
+		lines = ["Fun Number:  42\n","Funnyer Number: 8008"]
 		map = {""Fun Number":"fun", "Funnyer Number":"funnyer"}
 		prefix = "super"
 		Return Value: {'super.fun':'42','super.funnyer':'8008'}
@@ -98,7 +103,6 @@ def doLineParse(lines,prefix,map):
 				infos[prefix+"."+map[first]]=second.strip()
 
 	return infos
-
 
 _getSGdevice.sg_map=None
 
@@ -125,7 +129,7 @@ def getScsiInfo(scsi_id):
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 _debug("Failed to find a device for "+scsi_id+"\n"+`_getSGdevice.sg_map`)
+		 _debug("Failed to find a device for "+scsi_id+" MAP:"+`_getSGdevice.sg_map`)
 		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
@@ -134,6 +138,9 @@ def getScsiInfo(scsi_id):
 	if infos.has_key(prefix+'.vendor') and infos[prefix+'.vendor']=='ATA' and os.access("/usr/sbin/smartctl",os.X_OK):
 		p = os.popen("/usr/sbin/smartctl -i "+dev,"r")
 		infos.update(doLineParse(p.readlines(),prefix,smartmap))
+
+	if infos.has_key(prefix+".model") and infos[prefix+".model"].find("PERC") >= 0 and os.access("/usr/bin/omreport",os.X_OK):
+		infos.update(dell.getAllPERCInfo())
 
 	return infos
 
@@ -171,6 +178,20 @@ def getAllIBInfo():
 	"""Gather all IB card info"""
 	return _callOnDirList(_ibbase,getIBInfo)
 
+def getSystemInfo():
+	"""getSystemInfo() -> dictionary
+	
+	Gather System information such as kernel version, processor info, etc..
+	"""
+
+	d={}
+
+	d["version"] = lineGrab("/proc/version")
+	
+	d.update(doLineParse(fileGrab("/proc/meminfo"),"mem",{"MemTotal":"total","SwapTotal":"swap"}))
+
+	return d
+
 
 def _test():
 	global _debug
@@ -182,6 +203,7 @@ def _test():
 
 	d.update(getAllMAC())
 	d.update(getAllScsiInfo())
+	d.update(getSystemInfo())
 
 	keys = d.keys()
 	keys.sort()
