@@ -1,0 +1,44 @@
+#!/usr/bin/python
+""" Sark - the properties Gatherer
+"""
+
+usage="""
+sark - MASTER initial bootup property gathering
+
+	Use: sark [-c <config file>] [-m <xmlrpcurl>] [ -t <net,ib,disk,system> ] [-v] [-d]
+
+	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
+	-t <type>         Specify what types of properties to scan for. Can be configure in config file. Default: <net,ib,disk,system>
+	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
+	-v                Verbose, prints out each property as it is uploaded to the mcp
+	-d                Debug Mode - Only gather properties and output them, Show debug messages
+"""
+
+import master
+import os
+import xmlrpclib
+import sys
+
+
+# Procedure:
+#  Parse command line
+#  Load Config
+#  Run Configured Gather Steps
+#
+#  Connect to mcp
+#  download mcp properties for short hostname
+#  update any changes
+#    if property name does not exist add it to the database
+#  
+#
+#  Exit
+def main():
+	
+
+if __name__ == "__main__":
+	try:
+		main()
+	except KeyboardInterrupt:
+		pass
+
+

@@ -8,10 +8,7 @@ FIXMES:
 """
 
 import os
-import dell
-
-def _debug(msg):
-	pass
+from master import debug,dell
 
 def fileGrab(file):
 	"""fileGrab(file) => list
@@ -63,7 +60,7 @@ def _getSGdevice(scsi_id):
 		except AttributeError:
 			_getSGdevice.sg_map={}
 			if not os.access('/usr/bin/sg_map',os.X_OK):
-				_debug("failed to access sg_map or sg_inq " + str(e))
+				debug("failed to access sg_map or sg_inq " + str(e))
 				return {}
 			for line in os.popen("/usr/bin/sg_map -sd -x","r"):
 				parts = line.split()
@@ -121,12 +118,12 @@ def getScsiInfo(scsi_id):
 				}
 
 	if not os.access("/usr/bin/sg_inq",os.X_OK):
-		_debug("failed to access sg_map or sg_inq")
+		debug("failed to access sg_map or sg_inq")
 		return {}
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 _debug("Failed to find a device for "+scsi_id+" MAP:"+`_getSGdevice.sg_map`)
+		 debug("Failed to find a device for "+scsi_id+" MAP:"+`_getSGdevice.sg_map`)
 		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
@@ -157,7 +154,7 @@ def _callOnDirList(dir,func):
 	"""call a function on every file in a directory"""
 
 	if not os.access(dir,os.F_OK):
-		_debug("failed to access "+dir)
+		debug("failed to access "+dir)
 		return {}
 	entries = os.listdir(dir)
 	d = {}
@@ -196,10 +193,10 @@ def getSystemInfo():
 
 
 def _test():
-	global _debug
+	global debug
 	def dbg(msg):
 		print "DEBUG:",msg
-	_debug = dbg
+	debug = dbg
 
 	d={}
 
