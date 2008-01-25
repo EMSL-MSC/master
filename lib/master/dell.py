@@ -2,11 +2,11 @@
 """A library to use omreport to gather properties from the DELL PERC Cards."""
 
 import ssv
-from os import popen
+import os
 
 def mapit(dict,map,prefix):
 	"""mapit(dict,map,prefix) -> dictionary
-	copy data from dictionary according to map, while appending prefix
+	copy data from dictionary according to map, while prepending prefix
 	"""
 
 	infos={}
@@ -25,7 +25,10 @@ def getControllerDiskInfo(id,disktype):
 	}
 	info={}
 
-	p=popen("omreport storage %s controller=%s -fmt ssv"%(disktype,id),"r")
+	if not os.access("/usr/bin/omreport",os.X_OK):
+		return {}
+
+	p=os.popen("/usr/bin/omreport storage %s controller=%s -fmt ssv"%(disktype,id),"r")
 	l=ssv.getSSVDicts(p)
 	p.close()
 
@@ -42,7 +45,10 @@ def getAllPERCInfo():
 	cmap = { "Firmware Version":"fwver","Name":"name" }
 	infos = {}
 
-	p=popen("omreport storage controller -fmt ssv","r")
+	if not os.access("/usr/bin/omreport",os.X_OK):
+		return {}
+
+	p=os.popen("/usr/bin/omreport storage controller -fmt ssv","r")
 	l=ssv.getSSVDicts(p)
 	p.close()
 	

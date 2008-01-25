@@ -15,27 +15,15 @@ ID;Status;Name;Slot ID;State;Firmware Version;Minimum Required Firmware Version;
 """
 
 def getSSVDicts(fileobj):
-    lines=fileobj.readlines()
-
-    for line in lines:
+    for line in fileobj:
         if line[0:3] == "ID;":
             break
     else: #uh does this work like i think?
-        return None
+        return []
         
     headers=line.split(";")
 
-    
-
-    result=[]
-    for line in lines[lines.index(line)+1:]:
-        if len(line)>1:
-            d={}
-            parts=line.split(";")
-            for (header,part) in zip(headers,parts): 
-                d[header]=part
-            result.append(d)
-    return result 
+    return [(dict(zip(headers,line.split(";")))) for line in fileobj if len(line)>1]
 
 
 def _test():

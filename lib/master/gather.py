@@ -8,7 +8,6 @@ FIXMES:
 """
 
 import os
-import csv
 import dell
 
 def _debug(msg):
@@ -24,10 +23,11 @@ def fileGrab(file):
 	f.close()
 	return lines
 
+#FIXME Do some sort of exception handling
 def lineGrab(file):
 	"""lineGrab(file) => string
 
-	Grab the first line of a given filei
+	Grab the first line of a given file
 	"""
 	return fileGrab(file)[0].rstrip()
 
@@ -57,24 +57,22 @@ def _getSGdevice(scsi_id):
 	device - chan:target:id:lun string from
 	"""
 
-	if not os.access("/usr/bin/sg_map",os.X_OK):
-		_debug("failed to access sg_map or sg_inq")
-		return {}
-
-	if not _getSGdevice.sg_map:
-		_getSGdevice.sg_map={}
-		p = os.popen("/usr/bin/sg_map -sd -x","r")
-		lines = p.readlines()
-		for line in lines:
-			parts = line.split()
-			if len(parts) == 7:
-				(sg,c,t,i,l,type,dev)=parts
-				key=":".join((c,t,i,l))
-				_getSGdevice.sg_map[key]=dev
 	try:
-		return _getSGdevice.sg_map[scsi_id]
+		try:
+			return _getSGdevice.sg_map[scsi_id]
+		except AttributeError:
+			_getSGdevice.sg_map={}
+			if not os.access('/usr/bin/sg_map',os.X_OK):
+				_debug("failed to access sg_map or sg_inq " + str(e))
+				return {}
+			for line in os.popen("/usr/bin/sg_map -sd -x","r"):
+				parts = line.split()
+				if len(parts) == 7:
+					(sg,c,t,i,l,type,dev)=parts
+					key=":".join((c,t,i,l))
+					_getSGdevice.sg_map[key]=dev
 	except KeyError:
-		return None
+		return {}
 
 
 
@@ -83,28 +81,27 @@ def doLineParse(lines,prefix,map):
 
 	parse out lines with colons ':' specifying the fields
 	lines - list of lines.
-	prefix - what to append the keys in the dictionary with.
+	prefix - what to prepend to the keys in the dictionary.
 	map - dictionary map of what will be on each line before the :, and what it maps to in the returned dictionary
 
 	all lines not recognized are ignored, and if no lines are recognized the function returns an empty dictionary
 
 	example:
 		lines = ["Fun Number:  42\n","Funnyer Number: 8008"]
-		map = {""Fun Number":"fun", "Funnyer Number":"funnyer"}
+		map = {"Fun Number":"fun", "Funnyer Number":"funnyer"}
 		prefix = "super"
 		Return Value: {'super.fun':'42','super.funnyer':'8008'}
 	"""
 
 	infos={}
 	for line in lines:
-		if line.find(":")>0:
+		try:
 			(first,second) = line.split(':',1)
-			if first in map.keys():
-				infos[prefix+"."+map[first]]=second.strip()
+			infos[prefix+"."+map[first]]=second.strip()
+		except (ValueError,KeyError):
+			pass	#split error (no colon in line) or first not in map
 
 	return infos
-
-_getSGdevice.sg_map=None
 
 def getScsiInfo(scsi_id):
 	"""getScsiInfo(scsi_id) => dictionary
@@ -133,14 +130,18 @@ def getScsiInfo(scsi_id):
 		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
-	infos = doLineParse(p.readlines(),prefix,mymap)
+	infos = doLineParse(p,prefix,mymap)
 
-	if infos.has_key(prefix+'.vendor') and infos[prefix+'.vendor']=='ATA' and os.access("/usr/sbin/smartctl",os.X_OK):
-		p = os.popen("/usr/sbin/smartctl -i "+dev,"r")
-		infos.update(doLineParse(p.readlines(),prefix,smartmap))
+	try:
+		if infos[prefix+'.vendor']=='ATA' and os.access("/usr/sbin/smartctl",os.X_OK):
+			p = os.popen("/usr/sbin/smartctl -i "+dev,"r")
+			infos.update(doLineParse(p,prefix,smartmap))
 
-	if infos.has_key(prefix+".model") and infos[prefix+".model"].find("PERC") >= 0 and os.access("/usr/bin/omreport",os.X_OK):
-		infos.update(dell.getAllPERCInfo())
+		if "PERC" in infos[prefix+".model"]:
+			infos.update(dell.getAllPERCInfo())
+
+	except (IOError,KeyError):
+		pass	#if info doesn't have a vendor key or if we don't have a smartctl command
 
 	return infos
 
@@ -151,6 +152,7 @@ def getAllScsiInfo():
 	"""
 	return _callOnDirList("/sys/class/scsi_device/",getScsiInfo)
 
+#FIXME write a function signature
 def _callOnDirList(dir,func):
 	"""call a function on every file in a directory"""
 
@@ -188,7 +190,7 @@ def getSystemInfo():
 
 	d["version"] = lineGrab("/proc/version")
 	
-	d.update(doLineParse(fileGrab("/proc/meminfo"),"mem",{"MemTotal":"total","SwapTotal":"swap"}))
+	d.update(doLineParse(open("/proc/meminfo","r"),"mem",{"MemTotal":"total","SwapTotal":"swap"}))
 
 	return d
 
@@ -204,6 +206,7 @@ def _test():
 	d.update(getAllMAC())
 	d.update(getAllScsiInfo())
 	d.update(getSystemInfo())
+	d.update(getAllIBInfo())
 
 	keys = d.keys()
 	keys.sort()
