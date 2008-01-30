@@ -18,7 +18,9 @@ import master
 import os
 import xmlrpclib
 import sys
-
+import getopt
+import master.gather
+import socket
 
 # Procedure:
 #  Parse command line
@@ -34,6 +36,82 @@ import sys
 #  Exit
 def main():
 	
+	#defaults
+	types=[]
+	verbose=None
+
+	optlist,args = getopt.getopt(sys.argv[1:],"c:t:m:vdh")
+
+	if args:
+		print "Extra Arguments Given:" +args
+		return
+
+	for (arg,val) in optlist:
+		if arg == "-c":
+			master.config["config_file"]=val
+		if arg == "-t":
+			types.append(val.split(","))
+		if arg == "-m":
+			master.config["server_url"]=val
+		if arg == "-v":
+			verbose = True
+		if arg == "-d":
+			master.debug = master.basicdebug
+		if arg == "-h":
+			print usage
+			return
+	
+	master.load_config()
+
+	props={}
+	
+	for mod in master.config["sark_modules"]:
+		try:
+			master.debug("Processing <"+mod+"> verb")
+			props.update(master.gather.verbs[mod]())
+		except KeyError:
+			master.debug("Error processing <"+mod+"> verb")
+
+	mcp = xmlrpclib.Server(master.config["server_url"])
+	myname = socket.gethostname().split(".")[0]
+
+	sprops = mcp.master.getNodeProperties([myname])
+	if sprops.has_key(myname):
+		current = sprops[myname]
+	else:
+		current = []
+	#allprops = mcp.master.getProperties()
+
+	# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
+	print current
+	print props
+	for k,v,ts,cmt in current:
+		if props.has_key(k) and props[k] == v:
+			master.debug("deleting key"+k+"becasue it is already on the server")
+			del(props[k])
+
+	# Everything that is left needs to updated on the server
+	for k,v in props.items():
+		try:
+			if verbose: print "Adding",k," => ",v
+			
+			res = mcp.master.updateNodeProperty(myname,k,v)
+			master.debug("updateNodeProperty: res = "+`res`)
+			if not res:
+				master.debug("Adding key to db:"+k)
+				
+				res = mcp.master.addProperty(k,"Added by Sark on "+myname)
+				master.debug("addProperty: res="+`res`)
+				if res:
+					res = mcp.master.updateNodeProperty(myname,k,v)
+					if not res:
+						master.debug("Error adding "+k+" => "+v+" res:"+`res`)
+
+		except Exception,msg: #Will this ever happen
+			master.debug("Error updating property:"+k+":"+str(msg))
+			
+			
+
 
 if __name__ == "__main__":
 	try:

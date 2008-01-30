@@ -10,6 +10,15 @@ FIXMES:
 import os
 from master import debug,dell
 
+verbs={}
+
+def verb(verbname):
+	def embedded(func):
+		verbs[verbname]=func
+		return func
+	return embedded
+
+
 def fileGrab(file):
 	"""fileGrab(file) => list
 
@@ -35,6 +44,7 @@ def getMAC(interface):
 	"""
 	return {interface+'.mac':lineGrab("/sys/class/net/"+interface+"/address")}
 
+@verb("mac")
 def getAllMAC():
 	"""getALLMAC() => dictionary
 	Return 
@@ -45,7 +55,7 @@ def getAllMAC():
 	d = {}
 	for x in ints: 
 		# dont scan loopback or ipv6 over ipv4 interface
-		if not x in ("lo","sit0"):
+		if not x in ("lo","sit0","br0","br1"):
 			d.update(getMAC(x))
 	return d
 
@@ -142,6 +152,7 @@ def getScsiInfo(scsi_id):
 
 	return infos
 
+@verb("scsi")
 def getAllScsiInfo():
 	"""getAllScsiInfo() => dictionary
 
@@ -173,10 +184,12 @@ def getIBInfo(id):
 			d[ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
 	return d
 
+@verb("ib")
 def getAllIBInfo():
 	"""Gather all IB card info"""
 	return _callOnDirList(_ibbase,getIBInfo)
 
+@verb("system")
 def getSystemInfo():
 	"""getSystemInfo() -> dictionary
 	
@@ -191,25 +204,28 @@ def getSystemInfo():
 
 	return d
 
+@verb("all")
+def gatherALL():
+	d={}
+	for (v,f) in verbs.items():
+		if v != "all":
+			d.update(f())
+	return d
 
 def _test():
-	global debug
+	global debug,verbs
 	def dbg(msg):
 		print "DEBUG:",msg
 	debug = dbg
 
-	d={}
+	print verbs
 
-	d.update(getAllMAC())
-	d.update(getAllScsiInfo())
-	d.update(getSystemInfo())
-	d.update(getAllIBInfo())
+	d=verbs["all"]()
 
 	keys = d.keys()
 	keys.sort()
 	for key in keys:
 		print key," => ",d[key]
-
 
 if __name__ == "__main__":
 	_test()
