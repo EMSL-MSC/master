@@ -295,8 +295,8 @@ def getNodeProperties(nodes,filter=False):
 		return False
 
 @mxs.rpc
-def getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
-	"""getPropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
+	"""getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
 	
 	Retrieve all property change logs for a given period.
 	If a time period is not specified returns all records.

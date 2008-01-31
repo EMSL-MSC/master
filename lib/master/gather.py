@@ -50,6 +50,8 @@ def getAllMAC():
 	Return 
 	"""
 
+	if now os.access("/sys/class/net/",os.F_OK):
+		return {}
 	ints = os.listdir("/sys/class/net/")
 
 	d = {}
@@ -72,7 +74,7 @@ def _getSGdevice(scsi_id):
 			if not os.access('/usr/bin/sg_map',os.X_OK):
 				debug("failed to access sg_map or sg_inq " + str(e))
 				return {}
-			for line in os.popen("/usr/bin/sg_map -sd -x","r"):
+			for line in os.popen("/usr/bin/sg_map -sd -x 2> /dev/null","r"):
 				parts = line.split()
 				if len(parts) == 7:
 					(sg,c,t,i,l,type,dev)=parts
@@ -198,7 +200,8 @@ def getSystemInfo():
 
 	d={}
 
-	d["version"] = lineGrab("/proc/version")
+	d = dict(zip(('sysname', 'nodename', 'release', 'version', 'machine'),os.uname()))
+	del(d['nodename'])
 	
 	d.update(doLineParse(open("/proc/meminfo","r"),"mem",{"MemTotal":"total","SwapTotal":"swap"}))
 

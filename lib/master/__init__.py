@@ -25,6 +25,6 @@ def load_config():
 		for (k,v) in config.items():
 			debug("Config: "+str(k)+" => "+str(v)) 
 	except IOError:
-		debug("Error Loading Config file: "+file)
+		debug("Error Loading Config file: "+config["config_file"])
 
 
