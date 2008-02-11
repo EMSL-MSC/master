@@ -1,0 +1,213 @@
+#!/usr/bin/python
+""" master - general MASTER project control program
+"""
+
+usage="""
+master - general MASTER project control program
+
+	Use: master [-c <config file>] [-m <xmlrpcurl>] [-d] <action options>
+	
+	Actions:
+		[ -a -n <NodeList> ]
+		[ -s <StatusName> [ -D <StatusDescription> ] ]
+		[ -l -n <NodeList> [ --all ] ]
+		[ -p -n <NodeList> [ --all ] ]
+		[ -L ]
+		[ -P ]
+		[ -t <status> -n <NodeList> [ -r <comment> ] ]
+		[ -o <property> -i <value> -n <NodeList> [ -r <comment> ] ]
+
+	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
+	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
+	-v                Verbose, prints out extra information where possible
+	-d                Debug Mode - Show debug messages
+
+	-n <NodeList>     Select Nodes for Action
+
+	-a                Add a given list of nodes to the master system
+	-s <StatusName>   Add a new Status type to the master system
+	-D <StatusDescription> A short description of the status state
+
+	-l                Show a node status Log (10 entries)
+	-p                Show a node property Log(10 entries)
+	--all             Show All properties availible when using -l,-p options
+
+	-L                Show the state of a list of Nodes
+	-P                Show the current properties of a list of Nodes
+
+	-t <status>       Set the Current Status of a node.
+	-o <property>     Set a property on a host.
+	-i <value>        The Value of the set property
+	-r <Comment>      Add a comment on the Status or Property Change
+"""
+
+import master
+import os
+import xmlrpclib
+import sys
+import getopt
+import master.gather
+import socket
+from time import strftime,localtime
+
+
+def dt(epoch):
+	return strftime("%F %T", localtime(epoch))
+
+# Procedure:
+#  Parse command line
+#  Load Config
+#  Run Configured Gather Steps
+#
+#  Connect to mcp
+#  download mcp properties for short hostname
+#  update any changes
+#    if property name does not exist add it to the database
+#  
+#
+#  Exit
+def main():
+	types=[]
+	verbose=None
+	all=False
+	nodeList=[]
+	listProperty=False
+	listStatus=False
+	addNodes=False
+	addStatus=False
+	showStatus=False
+	showProperty=False
+	description=""
+	comment=""
+	propertyValue=""
+	statusValue=""
+	property=""
+
+	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:n:",['all'])
+
+	if args:
+		print "Extra Arguments Given:" + str(args)
+		return
+
+	actioncount=0
+	for (arg,val) in optlist:
+		if arg == "-c":
+			master.config["config_file"]=val
+		if arg == "-m":
+			master.config["server_url"]=val
+		if arg == "-v":
+			verbose = True
+		if arg == "-d":
+			master.debug = master.basicdebug
+
+		if arg == "-a":
+			addNodes = val #FIXME need to expand this later
+			actioncount += 1
+		if arg == "-s":
+			addStatus=val
+			actioncount += 1
+		if arg == "-D":
+			description=val
+
+		if arg == "-n":
+			nodeList=[val]
+
+		if arg == "-l":
+			listProperty = True
+			actioncount += 1
+		if arg == "-p":
+			listStatus = True
+			actioncount += 1
+		if arg == '--all':
+			all = True
+
+		if arg == '-L':
+			showStatus = True
+			actioncount += 1
+		if arg == '-P':
+			showProperty =True
+			actioncount += 1
+
+		if arg == '-t':
+			statusValue = val
+			actioncount += 1
+		if arg == '-o':
+			property = val
+			actioncount += 1
+		if arg == '-i':
+			propertyValue = val
+		if arg == '-r':
+			comment = val
+
+		if arg == "-h":
+			print usage
+			return
+	
+	if actioncount != 1:
+		print "You have specified an invalid number of actions.  You must specify exactly 1 action. You specfied:",actioncount
+		print usage
+		return
+
+	master.load_config()
+
+	mcp = xmlrpclib.Server(master.config["server_url"])
+
+	if listProperty:
+		plog = mcp.master.getNodePropertyHistory(NodeList)
+		master.debug("Result of getNodePropertyHistory: "+str(plog))
+		if plog:
+			for node,logs in plog.items():
+				if not all:
+					logs=logs[-10:]
+				print node+":"
+				for l in logs:
+					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
+			
+	if listStatus:
+		slog=mcp.master.getStatusHistory(NodeList)
+		master.debug("result of getStatusHistory: "+str(slog))
+		if slog:
+			for node,logs in slog.items():
+				if not all:
+					slog=slog[-10:]
+				print node+":"
+				for l in logs:
+					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",v[3]
+	
+	if addNodes:
+		for node in NodeList:
+			res = mcp.master.addNode(NodeList)
+			if not res:
+				master.debug("Failed to add node:"+str(node))
+			print "Add Node Failed:",str(node)
+
+	if addStatus:
+		res = mcp.master.addStatus(addStatus,description)
+		if not res:
+			master.debug("Failed to add status:"+str(addStatus))
+			print "Add Status Failed"
+
+	if showProperty:
+		res = mcp.master.getNodeProperties(nodeList)
+		if res:
+			for node,props in res.items():
+				print node+":"
+				for l in props:
+					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
+		
+	if showStatus:
+		res = mcp.master.getCurrentStatus(nodeList)
+		if res:
+			for node,stats in res.items():
+				print node+":"
+				for l in stats:
+					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",v[3]
+
+if __name__ == "__main__":
+	try:
+		main()
+	except KeyboardInterrupt:
+		pass
+
+
+	

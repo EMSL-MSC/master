@@ -50,7 +50,7 @@ def getAllMAC():
 	Return 
 	"""
 
-	if now os.access("/sys/class/net/",os.F_OK):
+	if not os.access("/sys/class/net/",os.F_OK):
 		return {}
 	ints = os.listdir("/sys/class/net/")
 

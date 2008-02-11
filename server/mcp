@@ -308,7 +308,7 @@ def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='inf
 	retDict = {}
 	curs = connection.cursor()
 	try:
-		curs.execute("""select node.name, property_id, p.name, extract(epoch from time)::int4, comment 
+		curs.execute("""select node.name, p.name, value, extract(epoch from time)::int4, comment 
 				from node_properties_log, node, property p where node.id = node_id and p.id = property_id 
 				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
 				{True:"", False:"and p.name in %(filter)s "}[filter == False] +
@@ -323,8 +323,9 @@ def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='inf
 		connection.commit()
 		curs.close()
 		return retDict
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
+		master.debug("getNodePropertyHistory error:"+str(msg))
 		return False
 
 @mxs.rpc
