@@ -8,29 +8,30 @@ master - general MASTER project control program
 	Use: master [-c <config file>] [-m <xmlrpcurl>] [-d] <action options>
 	
 	Actions:
-		[ -a -n <NodeList> ]
-		[ -s <StatusName> [ -D <StatusDescription> ] ]
-		[ -l -n <NodeList> [ --all ] ]
-		[ -p -n <NodeList> [ --all ] ]
-		[ -L ]
-		[ -P ]
-		[ -t <status> -n <NodeList> [ -r <comment> ] ]
-		[ -o <property> -i <value> -n <NodeList> [ -r <comment> ] ]
-
+        [ -s <StatusName> [ -D <Status Description> ] ]
+		[ -u username -D <User Display Name> ]
+        [ -w NodeList] [ -a ]
+                       [ -l [ -f ] ]
+                       [ -p [ -f ] ]
+                       [ -L ]
+                       [ -P ]
+                       [ -t <status> [ -r <comment> ] ]
+                       [ -o <property> -i <value> [ -r <comment> ] ]
+					
 	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
 	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
 	-v                Verbose, prints out extra information where possible
 	-d                Debug Mode - Show debug messages
 
-	-n <NodeList>     Select Nodes for Action
+	-w <NodeList>     Select Nodes for Action. default: local hostname 
 
 	-a                Add a given list of nodes to the master system
 	-s <StatusName>   Add a new Status type to the master system
 	-D <StatusDescription> A short description of the status state
 
 	-l                Show a node status Log (10 entries)
-	-p                Show a node property Log(10 entries)
-	--all             Show All properties availible when using -l,-p options
+	-p                Show a node property Log (10 entries)
+	-f                Show the full set of properties availible when using -l,-p options
 
 	-L                Show the state of a list of Nodes
 	-P                Show the current properties of a list of Nodes
@@ -38,7 +39,7 @@ master - general MASTER project control program
 	-t <status>       Set the Current Status of a node.
 	-o <property>     Set a property on a host.
 	-i <value>        The Value of the set property
-	-r <Comment>      Add a comment on the Status or Property Change
+	-r <Reason>       Add a Reason or Comment on the Status or Property Change
 """
 
 import master
@@ -48,11 +49,16 @@ import sys
 import getopt
 import master.gather
 import socket
+import pwd
 from time import strftime,localtime
 
 
 def dt(epoch):
-	return strftime("%F %T", localtime(epoch))
+	try:
+		return strftime("%F %T", localtime(epoch))
+	except TypeError:
+		master.debug("Failed to convert epoch: <"+str(epoch)+"> to string")
+		return "unknown"
 
 # Procedure:
 #  Parse command line
@@ -70,20 +76,21 @@ def main():
 	types=[]
 	verbose=None
 	all=False
-	nodeList=[]
+	nodeList=[socket.gethostname().split(".")[0]]
 	listProperty=False
 	listStatus=False
 	addNodes=False
 	addStatus=False
 	showStatus=False
 	showProperty=False
+	addUser=False
 	description=""
-	comment=""
+	reason=""
 	propertyValue=""
 	statusValue=""
 	property=""
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:n:",['all'])
+	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:")
 
 	if args:
 		print "Extra Arguments Given:" + str(args)
@@ -101,24 +108,27 @@ def main():
 			master.debug = master.basicdebug
 
 		if arg == "-a":
-			addNodes = val #FIXME need to expand this later
+			addNodes = True #FIXME need to expand this later
 			actioncount += 1
 		if arg == "-s":
-			addStatus=val
+			addStatus = val
+			actioncount += 1
+		if arg == "-u":
+			addUser = val
 			actioncount += 1
 		if arg == "-D":
 			description=val
 
-		if arg == "-n":
-			nodeList=[val]
+		if arg == "-w":
+			nodeList = [val]
 
 		if arg == "-l":
-			listProperty = True
-			actioncount += 1
-		if arg == "-p":
 			listStatus = True
 			actioncount += 1
-		if arg == '--all':
+		if arg == "-p":
+			listProperty = True
+			actioncount += 1
+		if arg == '-f':
 			all = True
 
 		if arg == '-L':
@@ -153,7 +163,7 @@ def main():
 	mcp = xmlrpclib.Server(master.config["server_url"])
 
 	if listProperty:
-		plog = mcp.master.getNodePropertyHistory(NodeList)
+		plog = mcp.master.getNodePropertyHistory(nodeList)
 		master.debug("Result of getNodePropertyHistory: "+str(plog))
 		if plog:
 			for node,logs in plog.items():
@@ -163,31 +173,38 @@ def main():
 				for l in logs:
 					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
 			
-	if listStatus:
-		slog=mcp.master.getStatusHistory(NodeList)
+	elif listStatus:
+		slog=mcp.master.getStatusHistory(nodeList)
 		master.debug("result of getStatusHistory: "+str(slog))
 		if slog:
 			for node,logs in slog.items():
 				if not all:
-					slog=slog[-10:]
+					logs=logs[-10:]
 				print node+":"
 				for l in logs:
-					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",v[3]
+					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",l[3]
 	
-	if addNodes:
-		for node in NodeList:
-			res = mcp.master.addNode(NodeList)
+	elif addNodes:
+		for node in nodeList:
+			res = mcp.master.addNode(nodeList)
 			if not res:
 				master.debug("Failed to add node:"+str(node))
-			print "Add Node Failed:",str(node)
+				print "Add Node Failed:",str(node)
 
-	if addStatus:
+	elif addStatus:
 		res = mcp.master.addStatus(addStatus,description)
 		if not res:
 			master.debug("Failed to add status:"+str(addStatus))
 			print "Add Status Failed"
 
-	if showProperty:
+	elif addUser and description:
+		res = mcp.master.addUser(addUser,description)
+		if not res:
+			master.debug("Failed to add user:"+str(addUser))
+			print "Add User Failed"
+
+
+	elif showProperty:
 		res = mcp.master.getNodeProperties(nodeList)
 		if res:
 			for node,props in res.items():
@@ -195,14 +212,18 @@ def main():
 				for l in props:
 					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
 		
-	if showStatus:
-		res = mcp.master.getCurrentStatus(nodeList)
+	elif showStatus:
+		res = mcp.master.getNodeStatus(nodeList)
 		if res:
 			for node,stats in res.items():
-				print node+":"
-				for l in stats:
-					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",v[3]
+				print node+":",dt(stats[1]),":",stats[0],"by",stats[2],"   C:",stats[3]
 
+	elif statusValue:
+		res = mcp.master.updateStatus(nodeList,statusValue,pwd.getpwuid(os.getuid())[0],comment)
+		if not res:
+			print "Error Setting Status:",statusValue, res
+			
+		
 if __name__ == "__main__":
 	try:
 		main()

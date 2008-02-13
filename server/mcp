@@ -179,12 +179,13 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 		connection.commit()
 		curs.close()
 		return True
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
+		master.debug("updateStatus error:"+str(msg))
 		connection.rollback()
 		return False
 
 @mxs.rpc
-def getCurrentStatus(nodes):
+def getNodeStatus(nodes):
 	"""getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
 	
 	Retrieve the current status of a node or set of nodes
