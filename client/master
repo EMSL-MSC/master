@@ -186,23 +186,22 @@ def main():
 	
 	elif addNodes:
 		for node in nodeList:
-			res = mcp.master.addNode(nodeList)
-			if not res:
-				master.debug("Failed to add node:"+str(node))
-				print "Add Node Failed:",str(node)
-
+			try:
+				mcp.master.addNode(nodeList)
+			except xmlrpclib.Fault, e:
+				print >>sys.stderr,"Adding Node Failed:", e
+		
 	elif addStatus:
-		res = mcp.master.addStatus(addStatus,description)
-		if not res:
-			master.debug("Failed to add status:"+str(addStatus))
-			print "Add Status Failed"
+		try:
+			mcp.master.addStatus(addStatus,description)
+		except xmlrpclib.Fault, e:
+			print >>sys.stderr,"Add Status Failed", e
 
 	elif addUser and description:
-		res = mcp.master.addUser(addUser,description)
-		if not res:
-			master.debug("Failed to add user:"+str(addUser))
-			print "Add User Failed"
-
+		try:
+			mcp.master.addUser(addUser,description)
+		except xmlrpclib.Fault, e:
+			print >>sys.stderr, "Add User Failed", e
 
 	elif showProperty:
 		res = mcp.master.getNodeProperties(nodeList)
@@ -219,9 +218,10 @@ def main():
 				print node+":",dt(stats[1]),":",stats[0],"by",stats[2],"   C:",stats[3]
 
 	elif statusValue:
-		res = mcp.master.updateStatus(nodeList,statusValue,pwd.getpwuid(os.getuid())[0],comment)
-		if not res:
-			print "Error Setting Status:",statusValue, res
+		try:
+			mcp.master.updateStatus(nodeList,statusValue,pwd.getpwuid(os.getuid())[0],comment)
+		except xmlrpclib.Fault, e:
+			print >>sys.stderr, "Error Setting Status:", e
 			
 		
 if __name__ == "__main__":

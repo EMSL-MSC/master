@@ -29,6 +29,7 @@ def try_call(function, args, result):
 		print "ResponseError: - %s" % inst
 	except xmlrpclib.Fault, inst:
 		print "Fault: - %s" % inst
+		retval = xmlrpclib.Fault
 	except Exception, inst :
 		print "Unexpected error: %s" % inst
 		raise
@@ -57,7 +58,7 @@ try_call(server.master.addNode, ["n0"], True)
 try_call(server.master.addStatus, ["bad", "Things are Bad"],True)
 try_call(server.master.addProperty, ["LogicalThinking", "Something that happens to Evan once a day"],True)
 try_call(server.master.addUser, ["AbooDaba", "Yoda"],True)
-try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba","this job sucks","10 years from now"],False)
+try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba","this job sucks","10 years from now"],xmlrpclib.Fault)
 try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba","life is cruel for a tester"],True)
 try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba"],True)
 try_call(server.master.getNodeStatus, [["n0"]],{'n0':0})
@@ -69,7 +70,7 @@ try_call(server.master.getStatusHistory, [["n0"], False, "now", "infinity"],{})
 try_call(server.master.getStatusHistory, [["n0"], ["bad"], 1200000000, "now"],{'n0':0})
 try_call(server.master.getStatusHistory, [["n0"], ["booboobear"], 1200000000, "-infinity"],{})
 try_call(server.master.updateNodeProperty, [["n0"], "LogicalThinking", "-1"], True)
-try_call(server.master.updateNodeProperty, [["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"], False)
+try_call(server.master.updateNodeProperty, [["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"], xmlrpclib.Fault)
 try_call(server.master.getNodeProperties, [["n0", "n0"]],{'n0':0})
 try_call(server.master.getNodeProperties, [["n0"], ["LogicalThinking"]],{'n0':0})
 try_call(server.master.getNodePropertyHistory, [["n0"]],{'n0':1})

@@ -50,7 +50,7 @@ def main():
 		if arg == "-c":
 			master.config["config_file"]=val
 		if arg == "-t":
-			types.append(val.split(","))
+			types += val.split(",")
 		if arg == "-m":
 			master.config["server_url"]=val
 		if arg == "-v":
@@ -63,6 +63,9 @@ def main():
 	
 	master.load_config()
 
+	if types:
+		master.config["sark_modules"]=types
+		
 	props={}
 	
 	for mod in master.config["sark_modules"]:
@@ -95,19 +98,23 @@ def main():
 			
 			res = mcp.master.updateNodeProperty(myname,k,v)
 			master.debug("updateNodeProperty: res = "+`res`)
-			if not res:
-				master.debug("Adding key to db:"+k)
-				
+		except xmlrpclib.Fault,msg:
+			master.debug("Adding key <"+k+"> to db because:"+str(msg))
+			
+			try:
 				res = mcp.master.addProperty(k,"Added by Sark on "+myname)
 				master.debug("addProperty: res="+`res`)
-				if res:
-					res = mcp.master.updateNodeProperty(myname,k,v)
-					if not res:
-						master.debug("Error adding "+k+" => "+v+" res:"+`res`)
+			except xmlrpclib.Fault:
+				print >>sys.stderr, "Error adding New property"
+				continue  # just move on
+			
+			try:
+				res = mcp.master.updateNodeProperty(myname,k,v)
+			except xmlrpclib.Fault,msg:
+				print >>sys.stderr,"Error adding "+k+" => "+v+": "+str(msg)
 
 		except Exception,msg: #Will this ever happen
 			master.debug("Error updating property:"+k+":"+str(msg))
-			
 			
 
 

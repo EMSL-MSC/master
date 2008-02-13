@@ -12,6 +12,7 @@ import pgdb
 import getopt
 import master
 from time import *
+from xmlrpclib import Fault
 
 debug = False
 
@@ -23,21 +24,26 @@ def epochTo8601(epoch):
 	except TypeError:
 		return epoch
 
+def Failure(code,message,srvdbg=""):
+	"""Return an xmlrpclib.Fault after calling the current master.debug function"""
+	master.debug("Failure %s:%s:%s"%tuple([str(x) for x in code,message,srvdbg]))
+	return Fault(code,message)
+		
 @mxs.rpc
 def addNode(name):
 	"""addNode(name) -> Boolean
 	
 	Create a new node. 
-	Returns new nodes unique ID or False on Error"""
+	Returns new nodes unique ID or xmlrpclib.Fault on Error"""
 	curs = connection.cursor()
 	try:
 		curs.execute("insert into node (name) values (%(name)s)", {"name":name})
 		connection.commit()
 		curs.close()
 		return True
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(10,"addNode failed for %s"%(name),msg)
 
 @mxs.rpc
 def getNodes(filter=False):
@@ -54,25 +60,25 @@ def getNodes(filter=False):
 		retList = curs.fetchall()
 		curs.close()
 		return retList
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getNodes failed: filter=%s"%(str(filter)),msg)
 
 @mxs.rpc
 def addStatus(name,desc = ''):
 	"""addStatus(name,desc = '') -> Boolean
 	
 	Create a new status type, with name and descripition.  
-	Returns new status ID or None on error"""
+	Returns new status ID or xmlrpclib.Fault on error"""
 	curs = connection.cursor()
 	try:
 		curs.execute("insert into status (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc})
 		connection.commit()
 		curs.close()
 		return True
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(10,"addStatus failed for %s:%s"(name,desc),msg)
 
 
 @mxs.rpc
@@ -89,25 +95,25 @@ def getStatus(names=False):
 		retDict = dict(curs.fetchall())
 		curs.close()
 		return retDict
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getStatus failed for %s"%(str(names)))
 
 @mxs.rpc
 def addProperty(name,desc = ''):
 	"""addProperty(name,desc = '') -> Boolean
 	
 	Create a new property type, with name and descripition.  
-	Returns new status ID or None on Error"""
+	Returns new status ID or xmlrpclib.Fault on Error"""
 	curs = connection.cursor()
 	try:
 		curs.execute("insert into property (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc})
 		connection.commit()
 		curs.close()
 		return True
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(10,"addProperty failed for %s:%s"%(name,desc),msg)
 
 @mxs.rpc
 def getProperties(names=False):
@@ -123,9 +129,9 @@ def getProperties(names=False):
 		retDict = dict(curs.fetchall())
 		curs.close()
 		return retDict
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getProperties failed for %s"%(str(names)))
 
 @mxs.rpc
 def addUser(name,fullname):
@@ -141,9 +147,9 @@ def addUser(name,fullname):
 		connection.commit()
 		curs.close()
 		return True
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(10,"addUser failed for %s:%s"(name,fullname),msg)
 
 @mxs.rpc
 def getUsers(names=False):
@@ -159,9 +165,9 @@ def getUsers(names=False):
 		retDict = dict(curs.fetchall())
 		curs.close()
 		return retDict
-	except pgdb.DatabaseError:
+	except pgdb.DatabaseError,msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getUsers failed for %s"%(str(names)))
 
 #FIXME I may need to get a static time when "now" is passed
 @mxs.rpc
@@ -170,7 +176,7 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 	
 	Change the status of a list of nodes.  
 	Comments and timestamp are optional
-	Returns True on success, False on Error
+	Returns True on success, xmlrpclib.Fault on Error
 	"""
 	retVal = []
 	curs = connection.cursor()
@@ -180,9 +186,8 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 		curs.close()
 		return True
 	except pgdb.DatabaseError,msg:
-		master.debug("updateStatus error:"+str(msg))
 		connection.rollback()
-		return False
+		raise Failure(10,"updateStatus failed for %s"%(str((nodes,status,user,comment,time))),msg)
 
 @mxs.rpc
 def getNodeStatus(nodes):
@@ -200,9 +205,9 @@ def getNodeStatus(nodes):
 		for i in curs.fetchall():
 			retDict[i[0]] = i[1:]
 		return retDict
-	except pgdb.DatabaseError, e:
+	except pgdb.DatabaseError, msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getNodeStatus failed for %s"%(str(nodes)))
 
 @mxs.rpc
 def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
@@ -234,7 +239,7 @@ def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'
 		return retDict
 	except pgdb.DatabaseError, e:
 		connection.rollback()
-		return False
+		raise Failure(20, "getStatusHistory Failed for %s"%(str((nodes,filter,startTime,endTime))),msg)
 
 @mxs.rpc
 def updateNodeProperty(node,property,propertyValue,comment="",time="now"):
@@ -247,7 +252,7 @@ def updateNodeProperty(node,property,propertyValue,comment="",time="now"):
 		comment		- user comment on this change
 		time		- a timestamp for the change.  Defaults to 'now'
 	
-	Returns timestamp of change, or None on error
+	Returns timestamp of change, or xmlrpclib.Fault on error
 		
 	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
 	"""
@@ -261,7 +266,7 @@ def updateNodeProperty(node,property,propertyValue,comment="",time="now"):
 	except pgdb.DatabaseError,msg:
 		master.debug("updateNodeProperty error:"+str(msg))
 		connection.rollback()
-		return False
+		raise Failure(10,"updateNodeProperty failed for %s"%(str((node,property,propertyValue,comment,time))),msg)
 
 @mxs.rpc
 def getNodeProperties(nodes,filter=False):
@@ -291,9 +296,9 @@ def getNodeProperties(nodes,filter=False):
 			except KeyError:
 				retVal[i[0]] = [i[1:]]
 		return retVal
-	except pgdb.DatabaseError, e:
+	except pgdb.DatabaseError, msg:
 		connection.rollback()
-		return False
+		raise Failure(20,"getNodeProperties failed for %s"(str((nodes,filter))),msg)
 
 @mxs.rpc
 def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
@@ -327,7 +332,7 @@ def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='inf
 	except pgdb.DatabaseError,msg:
 		connection.rollback()
 		master.debug("getNodePropertyHistory error:"+str(msg))
-		return False
+		raise Failure("getNodePropertyHistory failed for %s"%(str((nodes,filter,startTime,endTime))),msg)
 
 @mxs.rpc
 def serverTime():
