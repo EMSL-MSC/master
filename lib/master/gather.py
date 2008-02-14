@@ -9,7 +9,7 @@ FIXMES:
 
 import os
 from master import debug,dell
-from master.utils import *
+from master.util import *
 
 verbs={}
 
@@ -90,10 +90,10 @@ def getScsiInfo(scsi_id):
 	scsi_id - chan:target:id:lun string from /sys/class/scsi_disk/
 	Retrieve model number, serial number and firmware revision of a scsi device
 	"""
-	mymap = { ' Vendor identification':'vendor',
-			  ' Product identification':'model',
-			  ' Product revision level':'fwver',
-			  ' Unit serial number':'serial'
+	mymap = { 'Vendor identification':'vendor',
+			  'Product identification':'model',
+			  'Product revision level':'fwver',
+			  'Unit serial number':'serial'
 			  }
 
 	smartmap = { 	'Device Model':'model',
