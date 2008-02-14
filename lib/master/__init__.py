@@ -14,6 +14,7 @@ config = {
 	"database_name"     : "master",
 	"database_user"     : "master",
 	"database_password" : "",
+	"hpacucli"          : "/home/efelix/hpacucli/bld/.hpacucli",
 }
 
 def load_config():

@@ -34,7 +34,7 @@ def doLineParse(lines,prefix,map):
 	for line in lines:
 		try:
 			(first,second) = line.split(':',1)
-			infos[prefix+"."+map[first]]=second.strip()
+			infos[prefix+"."+map[first.strip()]]=second.strip()
 		except (ValueError,KeyError):
 			pass	#split error (no colon in line) or first not in map
 

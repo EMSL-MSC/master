@@ -155,7 +155,7 @@ def getIBInfo(id):
 	d={}
 	for (file,key) in togather:
 		if os.access(_ibbase,os.R_OK): 
-			d[ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
+			d[_ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
 	return d
 
 @verb("ib")
