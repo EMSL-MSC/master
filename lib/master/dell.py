@@ -3,18 +3,7 @@
 
 import ssv
 import os
-
-def mapit(dict,map,prefix):
-	"""mapit(dict,map,prefix) -> dictionary
-	copy data from dictionary according to map, while prepending prefix
-	"""
-
-	infos={}
-	for key in dict.keys():
-		if key in map.keys():
-			infos[prefix+"."+map[key]]=dict[key]
-
-	return infos
+from master.util import *
 
 def getControllerDiskInfo(id,disktype):
 	"""getControllerDriveInfo(id,disktype) -> dictionary"""
