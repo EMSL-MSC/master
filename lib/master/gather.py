@@ -184,6 +184,7 @@ def gatherALL():
 	d={}
 	for (v,f) in verbs.items():
 		if v != "all":
+			debug("Running :"+v+" Verb")
 			d.update(f())
 	return d
 
