@@ -88,7 +88,7 @@ def main():
 	# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 	for k,v,ts,cmt in current:
 		if props.has_key(k) and props[k] == v:
-			master.debug("deleting key <"+k+"> becasue it is already on the server")
+			master.debug("deleting key <"+k+"> because it is already on the server")
 			del(props[k])
 
 	# Everything that is left needs to updated on the server

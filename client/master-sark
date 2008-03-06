@@ -1,3 +1,18 @@
 #!/bin/bash
+#
+# chkconfig: 2345 22 78
+# description: Boot up asset gather script to start the sark tool from the MSCF \
+#              MASTER project
 
-echo hi
+[ -r /etc/mcp.conf ] || exit 0
+
+case "$1" in
+    start)
+	    /usr/bin/sark >> /var/log/sark.log 2>&1
+	;;
+	*)
+	echo "Usage: $0 start"
+	;;
+esac
+
+exit 

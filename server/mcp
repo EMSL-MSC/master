@@ -7,7 +7,7 @@ import os
 import sys
 import socket
 import pwd
-import masterXMLRPCServer as mxs
+import master.masterXMLRPCServer as mxs
 import pgdb
 import getopt
 import master
