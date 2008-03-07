@@ -81,6 +81,7 @@ def _getSGdevice(scsi_id):
 					(sg,c,t,i,l,type,dev)=parts
 					key=":".join((c,t,i,l))
 					_getSGdevice.sg_map[key]=dev
+			return _getSGdevice.sg_map[scsi_id]
 	except KeyError:
 		return {}
 
@@ -107,7 +108,7 @@ def getScsiInfo(scsi_id):
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 debug("Failed to find a device for "+scsi_id+" MAP:"+`_getSGdevice.sg_map`)
+		 debug("Failed to find a device for <"+scsi_id+"> MAP:"+`_getSGdevice.sg_map`)
 		 return {}
 	prefix="scsi."+scsi_id
 	p = os.popen("/usr/bin/sg_inq "+dev,"r")
@@ -184,7 +185,7 @@ def gatherALL():
 	d={}
 	for (v,f) in verbs.items():
 		if v != "all":
-			debug("Running :"+v+" Verb")
+			debug("Running <"+v+"> Verb")
 			d.update(f())
 	return d
 
