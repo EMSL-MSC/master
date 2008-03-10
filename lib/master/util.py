@@ -13,10 +13,10 @@ def mapit(dict,map,prefix):
 
 	return infos
 	
-def doLineParse(lines,prefix,map):
-	"""doLineParse(lines,prefix,map) => dictionary
+def doLineParse(lines,prefix,map,sep=':'):
+	"""doLineParse(lines,prefix,map,sep=':') => dictionary
 
-	parse out lines with colons ':' specifying the fields
+	parse out lines with colons <sep> specifying the fields
 	lines - list of lines.
 	prefix - what to prepend to the keys in the dictionary.
 	map - dictionary map of what will be on each line before the :, and what it maps to in the returned dictionary
@@ -33,7 +33,7 @@ def doLineParse(lines,prefix,map):
 	infos={}
 	for line in lines:
 		try:
-			(first,second) = line.split(':',1)
+			(first,second) = line.split(sep,1)
 			infos[prefix+"."+map[first.strip()]]=second.strip()
 		except (ValueError,KeyError):
 			pass	#split error (no colon in line) or first not in map
