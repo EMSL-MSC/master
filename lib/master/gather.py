@@ -8,7 +8,7 @@ FIXMES:
 """
 
 import os
-from master import debug,dell
+from master import debug,dell,amcc,hp
 from master.util import *
 
 verbs={}
@@ -122,6 +122,10 @@ def getScsiInfo(scsi_id):
 		if "PERC" in infos[prefix+".model"]:
 			infos.update(dell.getAllPERCInfo())
 
+		if "AMCC" in infos[prefix+".vendor"]:
+			infos.update(amcc.getAllAMCCInfo())
+
+
 	except (IOError,KeyError):
 		pass	#if info doesn't have a vendor key or if we don't have a smartctl command
 
@@ -133,6 +137,10 @@ def getAllScsiInfo():
 
 	retrive all information for scsi disks
 	"""
+	
+	if os.access("/sys/module/cciss",os.F_OK):
+		hp.getAllSmartArrayInfo()
+
 	return _callOnDirList("/sys/class/scsi_device/",getScsiInfo)
 
 #FIXME write a function signature
