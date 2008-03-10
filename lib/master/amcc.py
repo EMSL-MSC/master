@@ -41,10 +41,7 @@ def getControllerDiskInfo(id):
 	for port in ports:
 		name="/%s/%s"%(id,port)
 		p = os.popen("/usr/bin/tw_cli "+name+" show all","r")
-		plines = []
-		for l in p.readlines():
-			if l.find(name) == 0:
-				plines.append(l[len(name)+1:])
+		plines = [ l[len(name)+1:] for l in p.readlines() if l.startswith(name) ]
 
 		info.update(doLineParse(plines,"amcc"+name.replace("/","."),cmap,"="))
 
