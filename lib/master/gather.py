@@ -138,10 +138,13 @@ def getAllScsiInfo():
 	retrive all information for scsi disks
 	"""
 	
+	info = {}
 	if os.access("/sys/module/cciss",os.F_OK):
-		hp.getAllSmartArrayInfo()
+		info.update(hp.getAllSmartArrayInfo())
 
-	return _callOnDirList("/sys/class/scsi_device/",getScsiInfo)
+	info.update(_callOnDirList("/sys/class/scsi_device/",getScsiInfo))
+	
+	return info
 
 #FIXME write a function signature
 def _callOnDirList(dir,func):
