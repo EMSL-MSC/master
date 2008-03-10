@@ -64,10 +64,10 @@ setup(name='master', version='0.1',
 	url="https://cvs.pnl.gov/mscf/wiki/MASTER",
 	package_dir= {'master':'lib/master'},
 	packages=['master'],
-	#defautl to default exec_prefix or somesuch.. /usr/bin/ in some cases
+
 	scripts = [('/usr/bin/',['client/master','client/sark']), ("/etc/init.d",["client/master-sark"]),("/usr/sbin",["server/mcp"])],
 	data_files = [('/etc/',['misc/mcp.conf'])],
-	requires=['python (>=2.4)'],
+	requires=['python (>=2.4)','hostparser'],
 	cmdclass = { 
 	    'install_scripts': local_install_scripts, 
 	    'build_scripts': local_build_scripts, 

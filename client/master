@@ -51,7 +51,7 @@ import master.gather
 import socket
 import pwd
 from time import strftime,localtime
-
+from hostparser import parsenodes
 
 def dt(epoch):
 	try:
@@ -120,7 +120,7 @@ def main():
 			description=val
 
 		if arg == "-w":
-			nodeList = [val]
+			nodeList = parsenodes.expand(val,[])
 
 		if arg == "-l":
 			listStatus = True
@@ -155,6 +155,11 @@ def main():
 	
 	if actioncount != 1:
 		print "You have specified an invalid number of actions.  You must specify exactly 1 action. You specfied:",actioncount
+		print usage
+		return
+		
+	if ( listProperty or listStatus or addNodes or showStatus or showProperty ) and not nodeList:
+		print "You have not provided a node list for processing"
 		print usage
 		return
 
