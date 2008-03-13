@@ -81,7 +81,7 @@ CREATE TABLE node_status_log (
     status_id integer NOT NULL,
     "time" timestamp without time zone DEFAULT now() NOT NULL,
     "comment" character varying(64),
-    user_id integer
+    user_id integer NOT NULL
 );
 
 
@@ -345,4 +345,13 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
-
+INSERT INTO status (name,description) values
+    ('poweroff','The Node is Powered off'),
+	('poweron','The Node is Powered on'),
+	('ok','The Node has a general feeling of goodness'),
+	('dead','The Node is Dead'),
+	('maint','The node has been marked for maintenance')
+	;
+INSERT INTO property (name,description) values
+    ('cluster','The name of a cluster this node belongs to')
+	;

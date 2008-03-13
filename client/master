@@ -9,6 +9,7 @@ master - general MASTER project control program
 	
 	Actions:
         [ -s <StatusName> [ -D <Status Description> ] ]
+		[ -S ]
 		[ -u username -D <User Display Name> ]
         [ -w NodeList] [ -a ]
                        [ -l [ -f ] ]
@@ -16,6 +17,7 @@ master - general MASTER project control program
                        [ -L ]
                        [ -P ]
                        [ -t <status> [ -r <comment> ] ]
+					   [ -n <comment> ]
                        [ -o <property> -i <value> [ -r <comment> ] ]
 					
 	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
@@ -28,6 +30,7 @@ master - general MASTER project control program
 	-a                Add a given list of nodes to the master system
 	-s <StatusName>   Add a new Status type to the master system
 	-D <StatusDescription> A short description of the status state
+	-S                List all available statuses
 
 	-l                Show a node status Log (10 entries)
 	-p                Show a node property Log (10 entries)
@@ -40,6 +43,8 @@ master - general MASTER project control program
 	-o <property>     Set a property on a host.
 	-i <value>        The Value of the set property
 	-r <Reason>       Add a Reason or Comment on the Status or Property Change
+	
+	-n <comment>      Add a Note about a system
 """
 
 import master
@@ -84,13 +89,16 @@ def main():
 	showStatus=False
 	showProperty=False
 	addUser=False
+	makeComment=False
+	showAllStatuses=False
 	description=""
 	reason=""
 	propertyValue=""
 	statusValue=""
+	comment=""
 	property=""
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:")
+	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:n:S")
 
 	if args:
 		print "Extra Arguments Given:" + str(args)
@@ -121,7 +129,7 @@ def main():
 
 		if arg == "-w":
 			nodeList = parsenodes.expand(val,[])
-
+			
 		if arg == "-l":
 			listStatus = True
 			actioncount += 1
@@ -148,6 +156,14 @@ def main():
 			propertyValue = val
 		if arg == '-r':
 			comment = val
+			
+		if arg == '-n':
+			makeComment = val
+			actioncount += 1
+			
+		if arg == '-S':
+			showAllStatuses = True
+			actioncount += 1
 
 		if arg == "-h":
 			print usage
@@ -158,11 +174,13 @@ def main():
 		print usage
 		return
 		
-	if ( listProperty or listStatus or addNodes or showStatus or showProperty ) and not nodeList:
+	if ( listProperty or listStatus or addNodes or showStatus or showProperty or makeComment or property) and not nodeList:
 		print "You have not provided a node list for processing"
 		print usage
 		return
 
+		master.debug("nodeList="+str(nodeList))
+		
 	master.load_config()
 
 	mcp = xmlrpclib.Server(master.config["server_url"])
@@ -228,6 +246,34 @@ def main():
 		except xmlrpclib.Fault, e:
 			print >>sys.stderr, "Error Setting Status:", e
 			
+	elif makeComment:
+		try:
+			statuses = mcp.master.getNodeStatus(nodeList)
+			print statuses
+			for node in nodeList:
+				mcp.master.updateStatus([node],statuses[node][0],pwd.getpwuid(os.getuid())[0],makeComment)
+		except xmlrpclib.Fault, e:
+			print >>sys.stderr, "Error Setting Status:", e
+	
+	elif showAllStatuses:
+		try:
+			stati=mcp.master.getStatus()
+			for k,v in stati.items():
+				print k,":",v
+		except xmlrpclib.Fault, e:
+			print >>sys.stderr, "Error Listing Statuses:", e
+			
+	elif property:
+		for node in nodeList:
+			master.debug("setting <"+node+"> property <"+property+"> to <"+propertyValue+">")
+			try:
+				res = mcp.master.updateNodeProperty(node,property,propertyValue)
+				master.debug("updateNodeProperty: res = "+`res`)
+			except xmlrpclib.Fault, e:
+				print >>sys.stderr, "Error Setting Property:", e
+			
+	else:
+		print "unhandled options:",sys.argv
 		
 if __name__ == "__main__":
 	try:
