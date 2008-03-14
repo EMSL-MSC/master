@@ -65,7 +65,7 @@ setup(name='master', version='0.1',
 	package_dir= {'master':'lib/master'},
 	packages=['master'],
 
-	scripts = [('/usr/bin/',['client/master','client/sark']), ("/etc/init.d",["client/master-sark"]),("/usr/sbin",["server/mcp"])],
+	scripts = [('/usr/bin/',['client/master','client/sark','client/nadmin']), ("/etc/init.d",["client/master-sark"]),("/usr/sbin",["server/mcp"])],
 	data_files = [('/etc/',['misc/mcp.conf'])],
 	requires=['python (>=2.4)','hostparser'],
 	cmdclass = { 

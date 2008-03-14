@@ -395,13 +395,23 @@ def main():
 	for (arg,val) in optlist:
 		if arg == '-d':
 			debug=1
-
+		if arg == "-c":
+			master.config["config_file"]=val
+	
+	master.load_config()
+	
 	if not debug:
 		daemonize()
 	else:
 		master.debug = master.basicdebug
 
-	connection = pgdb.connect(user="master", database="master")
+	connection = pgdb.connect(
+		user=master.config["database_user"], 
+		database=master.config["database_name"], 
+		password=master.config["database_password"],
+		host=master.config["database_server"]
+	)
+	
 	srv = mxs.MasterXMLRPCServer(("",627), authConnection)
 	while True:
 		try:
