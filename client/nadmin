@@ -22,42 +22,42 @@ import getopt
 import socket
 import sys
 import hostparser
+import debug
 
 DEBUG=False
 SCONTROL_BIN='/opt/hptc/bin/scontrol'
 
+@debug.debug(DEBUG)
 def main():
 	try:
-		(options, argsleft) = getopt(sys.argv[1:], 'hr:w:iocm:d', ['config='])
+		(options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:d', ['config='])
 	except getopt.GetoptError:
 		print usage
 		sys.exit(1)
-	args = dict(zip(options))
+	args = dict(options)
 	
 	if '-d' in args:
 		DEBUG = True
 
 	mcp = setup_mcp(args)
-
+	
+	if '-r' in args:
+		comment = args['-r']
+	else:
+		comment = ''
 	# Check
 	if '-c' in args:
 		maintnodes = get_maint_nodes(mcp)
 		maintnodes = check_drained(maintnodes)
 		print_maint_nodes(mcp, maintnodes)
-
-	if '-r' in args:
-		comment = args['-r']
-	else:
-		comment = ''
-
 	# Out
-	if '-o' in args:
+	elif '-o' in args:
 		if '-w' not in args:
 			print "Error: Missing NodeList"
 			print usage
 			sys.exit(1)
 
-		if comment = '':
+		if comment == '':
 			print "Error: Missing Reason."
 			print usage
 			sys.exit(1)
@@ -65,9 +65,8 @@ def main():
 		comment = args['-r'].strip()
 		outnodes = parse_nodelist(args['-w'])
 		drain_nodes(mcp, outnodes, comment)
-
 	# In
-	if '-i' in args:
+	elif '-i' in args:
 		if '-w' not in args:
 			print "Error: Missing NodeList"
 			print usage
@@ -75,7 +74,12 @@ def main():
 		
 		innodes = parse_nodelist(args['-w'])
 		undrain_nodes(mcp, innodes, comment)
+	else:
+		print "Error: No action specified."
+		sys.exit(1)
 
+
+@debug.debug(DEBUG)
 def setup_mcp(args):
 	if '--config' in args:
 		master.config['config_file'] = args['--config']
@@ -86,6 +90,7 @@ def setup_mcp(args):
 	master.load_config()
 	return xmlrpclib.Server(master.config['server_url'])
 
+@debug.debug(DEBUG)
 def get_maint_nodes(mcp):
 	# Really here we should be using a function like getNodesWithStatus
 	# or getNodesWithPropertyAndStatus, or something that filters earlier
@@ -95,6 +100,7 @@ def get_maint_nodes(mcp):
 
 	return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
 
+@debug.debug(DEBUG)
 def check_drained(nodelist):
 	drained = []
 	
@@ -113,6 +119,7 @@ def check_drained(nodelist):
 	return drained
 			
 
+@debug.debug(DEBUG)
 def print_maint_nodes(mcp, nodelist):
 	node_statuses = mcp.master.getCurrentStatus(nodelist)
 
@@ -120,16 +127,19 @@ def print_maint_nodes(mcp, nodelist):
 		print "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
 	
 
+@debug.debug(DEBUG)
 def parse_nodelist(nodestr):
 	return hostparser.parsenodes.expand(nodelist,rettype=[])
 
+@debug.debug(DEBUG)
 def drain_nodes(mcp, nodelist, comment):
 	scontrol_cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"'% (
 				SCONTROL_BIN,' '.join(nodelist), comment)
 	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
 	
 	set_status(mcp, 'maint', nodelist, comment)
-	
+
+@debug.debug(DEBUG)	
 def undrain_nodes(mcp, nodelist, comment=''):
 	if comment != '':
 		scontrol_cmd = '%s update NodeName="%s" State="IDLE" Reason="%s"'% (
@@ -142,5 +152,9 @@ def undrain_nodes(mcp, nodelist, comment=''):
 	
 	set_status(mcp, 'maint', nodelist, comment)
 
+@debug.debug(DEBUG)
 def set_status(mcp, status, nodelist, comment):
 	mcp.master.updateStatus(nodelist, status, comment)
+
+if __name__ == "__main__":
+	main()
