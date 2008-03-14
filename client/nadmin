@@ -1,0 +1,146 @@
+#!/usr/bin/env python
+
+usage="""
+nadmin - Node administration utility.
+
+	Use: nadmin [--config <config file>] [-m <xmlrpcurl>] [-d] <action options>
+
+	Actions:
+		-i	Return Nodes to Use.
+		-o	Remove Nodes From Use.
+		-c	Check for nodes to be worked on.
+	
+	-w <NodeList>	A list of nodes to perform the action on.
+	-r <comment>	A comment for the action.
+	-h 		Display this message.
+"""
+
+import master
+import os
+import xmlrpclib
+import getopt
+import socket
+import sys
+import hostparser
+
+DEBUG=False
+SCONTROL_BIN='/opt/hptc/bin/scontrol'
+
+def main():
+	try:
+		(options, argsleft) = getopt(sys.argv[1:], 'hr:w:iocm:d', ['config='])
+	except getopt.GetoptError:
+		print usage
+		sys.exit(1)
+	args = dict(zip(options))
+	
+	if '-d' in args:
+		DEBUG = True
+
+	mcp = setup_mcp(args)
+
+	# Check
+	if '-c' in args:
+		maintnodes = get_maint_nodes(mcp)
+		maintnodes = check_drained(maintnodes)
+		print_maint_nodes(mcp, maintnodes)
+
+	if '-r' in args:
+		comment = args['-r']
+	else:
+		comment = ''
+
+	# Out
+	if '-o' in args:
+		if '-w' not in args:
+			print "Error: Missing NodeList"
+			print usage
+			sys.exit(1)
+
+		if comment = '':
+			print "Error: Missing Reason."
+			print usage
+			sys.exit(1)
+
+		comment = args['-r'].strip()
+		outnodes = parse_nodelist(args['-w'])
+		drain_nodes(mcp, outnodes, comment)
+
+	# In
+	if '-i' in args:
+		if '-w' not in args:
+			print "Error: Missing NodeList"
+			print usage
+			sys.exit(1)
+		
+		innodes = parse_nodelist(args['-w'])
+		undrain_nodes(mcp, innodes, comment)
+
+def setup_mcp(args):
+	if '--config' in args:
+		master.config['config_file'] = args['--config']
+	if '-m' in args:
+		master.config['server_url'] = args['-m']
+	if DEBUG:
+		master.debug = master.basicdebug
+	master.load_config()
+	return xmlrpclib.Server(master.config['server_url'])
+
+def get_maint_nodes(mcp):
+	# Really here we should be using a function like getNodesWithStatus
+	# or getNodesWithPropertyAndStatus, or something that filters earlier
+	# but instead we will get all nodes, and then get the statuses for all
+	# of the nodes and then filter.
+	node_statuses = mcp.master.getCurrentStatus(mcp.master.getNodes())
+
+	return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
+
+def check_drained(nodelist):
+	drained = []
+	
+	scontrol_cmd = '%s show node "%s"'% (SCONTROL_BIN,' '.join(nodelist))
+	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+
+	line = child_stdout.readline().strip()
+	while line:
+		line += child_stodout.readline().strip()
+		node_dict = dict([tuple(a.split('=')) for a in line.split()])
+		if node_dict['State'] == 'IDLE+DRAIN':
+			drained.append(node_dict['NodeName'])
+	
+		line = child_stdout.readline().strip()
+
+	return drained
+			
+
+def print_maint_nodes(mcp, nodelist):
+	node_statuses = mcp.master.getCurrentStatus(nodelist)
+
+	for node, details in node_statuses:
+		print "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
+	
+
+def parse_nodelist(nodestr):
+	return hostparser.parsenodes.expand(nodelist,rettype=[])
+
+def drain_nodes(mcp, nodelist, comment):
+	scontrol_cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"'% (
+				SCONTROL_BIN,' '.join(nodelist), comment)
+	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+	
+	set_status(mcp, 'maint', nodelist, comment)
+	
+def undrain_nodes(mcp, nodelist, comment=''):
+	if comment != '':
+		scontrol_cmd = '%s update NodeName="%s" State="IDLE" Reason="%s"'% (
+					SCONTROL_BIN,' '.join(nodelist), comment)
+	else:
+		scontrol_cmd = '%s update NodeName="%s" State="IDLE"'% (
+				SCONTROL_BIN,' '.join(nodelist))
+
+	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+	
+	set_status(mcp, 'maint', nodelist, comment)
+
+def set_status(mcp, status, nodelist, comment):
+	mcp.master.updateStatus(nodelist, status, comment)
