@@ -67,7 +67,7 @@ setup(name='master', version='0.1',
 
 	scripts = [('/usr/bin/',['client/master','client/sark','client/nadmin']), ("/etc/init.d",["client/master-sark"]),("/usr/sbin",["server/mcp"])],
 	data_files = [('/etc/',['misc/mcp.conf'])],
-	requires=['python (>=2.4)','hostparser'],
+	requires=['python (>=2.4)','hostparser','postgresql-python'],
 	cmdclass = { 
 	    'install_scripts': local_install_scripts, 
 	    'build_scripts': local_build_scripts, 

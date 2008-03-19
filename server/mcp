@@ -191,7 +191,7 @@ def updateStatus(nodes,status,user,comment="",time="now"):
 
 @mxs.rpc
 def getNodeStatus(nodes):
-	"""getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
+	"""getNodeStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
 	
 	Retrieve the current status of a node or set of nodes
 	The nodes parameter is a list of nodes to get status for
@@ -335,6 +335,33 @@ def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='inf
 		raise Failure("getNodePropertyHistory failed for %s"%(str((nodes,filter,startTime,endTime))),msg)
 
 @mxs.rpc
+def getNodesFilter(*kwargs):
+	"""getNodesFilter(*kwargs) -> list
+	
+	The following keyword arguments take a string or list of strings
+	
+	status
+	statuslike
+	property
+	propertylike
+	propvalue
+	propvaluelike
+	node
+	nodelike
+	user
+	userlike
+	
+	These arguments take a time value the is a string value such as 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+	startTime
+	endTime
+	
+	Examples:
+		getNodesFilter(nodelike="cut",status="ok")
+		getNodesFilter(nodelike=("cut","director"),status="dead")
+	"""
+	return Failure("Kenny has not implemented me yet",None)
+	
+@mxs.rpc
 def serverTime():
 	"""serverTime -> float
 
@@ -354,14 +381,19 @@ def authConnection(rh):
 	if rh.client_address[0] == "127.0.0.1":
 		return 1
 	else:
-		client = socket.gethostbyaddr(rh.client_address[0])
-		client_name = client[0].split(".")[0]
-		if socket.gethostbyname(client_name) not in client[2]:
-			return 0
-		curs = connection.cursor()
-		curs.execute("select * from node where name = %(client_name)s", {"client_name":client_name})
-		return curs.rowcount
-
+		try:
+			client = socket.gethostbyaddr(rh.client_address[0])
+			client_name = client[0].split(".")[0]
+			if socket.gethostbyname(client_name) not in client[2]:
+				return 0
+			curs = connection.cursor()
+			curs.execute("select * from node where name = %(client_name)s", {"client_name":client_name})
+			if not curs.rowcount:
+				master.debug("Rejecting client connection: "+str(client)+":"+client_name)
+			return curs.rowcount
+		except socket.gaierror, msg:
+			return Failure("Authorization Error: ",msg)
+			
 def daemonize(user = None, group = None):
 	pid = os.fork()
 	if pid > 0:
@@ -391,7 +423,7 @@ def main():
 	global connection
 	global debug
 
-	optlist,args = getopt.getopt(sys.argv[1:],'d')
+	optlist,args = getopt.getopt(sys.argv[1:],'dc:')
 	for (arg,val) in optlist:
 		if arg == '-d':
 			debug=1

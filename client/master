@@ -97,6 +97,7 @@ def main():
 	statusValue=""
 	comment=""
 	property=""
+	serverurl=""
 
 	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:n:S")
 
@@ -109,7 +110,7 @@ def main():
 		if arg == "-c":
 			master.config["config_file"]=val
 		if arg == "-m":
-			master.config["server_url"]=val
+			serverurl=val
 		if arg == "-v":
 			verbose = True
 		if arg == "-d":
@@ -182,6 +183,8 @@ def main():
 		master.debug("nodeList="+str(nodeList))
 		
 	master.load_config()
+	if serverurl:
+		master.config["server_url"]=serverurl
 
 	mcp = xmlrpclib.Server(master.config["server_url"])
 
@@ -210,7 +213,7 @@ def main():
 	elif addNodes:
 		for node in nodeList:
 			try:
-				mcp.master.addNode(nodeList)
+				mcp.master.addNode(node)
 			except xmlrpclib.Fault, e:
 				print >>sys.stderr,"Adding Node Failed:", e
 		

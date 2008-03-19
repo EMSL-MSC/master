@@ -39,6 +39,7 @@ def main():
 	#defaults
 	types=[]
 	verbose=None
+	serverurl=""
 
 	optlist,args = getopt.getopt(sys.argv[1:],"c:t:m:vdh")
 
@@ -52,7 +53,7 @@ def main():
 		if arg == "-t":
 			types += val.split(",")
 		if arg == "-m":
-			master.config["server_url"]=val
+			serverurl=val
 		if arg == "-v":
 			verbose = True
 		if arg == "-d":
@@ -62,7 +63,10 @@ def main():
 			return
 	
 	master.load_config()
-
+	
+	if serverurl:
+		master.config["server_url"]=serverurl
+	
 	if types:
 		master.config["sark_modules"]=types
 		
