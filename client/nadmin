@@ -21,7 +21,7 @@ import xmlrpclib
 import getopt
 import socket
 import sys
-import hostparser
+from hostparser import parsenodes
 
 DEBUG=False
 SCONTROL_BIN='/opt/hptc/bin/scontrol'
@@ -34,11 +34,19 @@ def main():
 		print usage
 		sys.exit(1)
 	args = dict(options)
+
+	if '-h' in args:
+		print usage
+		sys.exit(0)
 	
 	if '-d' in args:
 		DEBUG = True
 
-	mcp = setup_mcp(args)
+	try:
+		mcp = setup_mcp(args)
+	except:
+		print "Error connecting to the mcp."
+		sys.exit(2)
 	
 	if '-r' in args:
 		comment = args['-r']
@@ -46,9 +54,12 @@ def main():
 		comment = ''
 	# Check
 	if '-c' in args:
-		maintnodes = get_maint_nodes(mcp)
-		maintnodes = check_drained(maintnodes)
-		print_maint_nodes(mcp, maintnodes)
+		try:
+			maintnodes = get_maint_nodes(mcp)
+			maintnodes = check_drained(maintnodes)
+			print_maint_nodes(mcp, maintnodes)
+		except:
+			print "No nodes available for maintenance."
 	# Out
 	elif '-o' in args:
 		if '-w' not in args:
@@ -61,18 +72,35 @@ def main():
 			print usage
 			sys.exit(1)
 
-		comment = args['-r'].strip()
-		outnodes = parse_nodelist(args['-w'])
-		drain_nodes(mcp, outnodes, comment)
+		try:
+			outnodes = parse_nodelist(args['-w'])
+		except:
+			print "Error parsing nodelist."
+			sys.exit(2)
+
+		if len(outnodes) > 0:
+			drain_nodes(mcp, outnodes, comment)
+		else:
+			print "Missing node list."
+			sys.exit(1)
 	# In
 	elif '-i' in args:
 		if '-w' not in args:
 			print "Error: Missing NodeList"
 			print usage
 			sys.exit(1)
-		
-		innodes = parse_nodelist(args['-w'])
-		undrain_nodes(mcp, innodes, comment)
+	
+		try:
+			innodes = parse_nodelist(args['-w'])
+		except:
+			print "Error parsing nodelist."
+			sys.exit(2)
+
+		if len(innodes) > 0:
+			undrain_nodes(mcp, innodes, comment)
+		else:
+			print "Missing node list."
+			sys.exit(1)
 	else:
 		print "Error: No action specified."
 		sys.exit(1)
@@ -95,7 +123,7 @@ def get_maint_nodes(mcp):
 	# or getNodesWithPropertyAndStatus, or something that filters earlier
 	# but instead we will get all nodes, and then get the statuses for all
 	# of the nodes and then filter.
-	node_statuses = mcp.master.getCurrentStatus(mcp.master.getNodes())
+	node_statuses = mcp.master.getNodeStatus(mcp.master.getNodes())
 
 	return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
 
@@ -104,14 +132,16 @@ def check_drained(nodelist):
 	drained = []
 	
 	scontrol_cmd = '%s show node "%s"'% (SCONTROL_BIN,' '.join(nodelist))
-	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+	(child_stdin, child_stdout) = os.popen2(scontrol_cmd)
 
 	line = child_stdout.readline().strip()
 	while line:
-		line += child_stodout.readline().strip()
-		node_dict = dict([tuple(a.split('=')) for a in line.split()])
-		if node_dict['State'] == 'IDLE+DRAIN':
-			drained.append(node_dict['NodeName'])
+		line += child_stdout.readline().strip()
+		lparts = line.split()
+		node_name = lparts[0].split('=')[1].strip()
+		state = lparts[1].split('=')[1].strip()
+		if state == 'IDLE+DRAIN':
+			drained.append(node_name)
 	
 		line = child_stdout.readline().strip()
 
@@ -120,21 +150,23 @@ def check_drained(nodelist):
 
 
 def print_maint_nodes(mcp, nodelist):
-	node_statuses = mcp.master.getCurrentStatus(nodelist)
-
-	for node, details in node_statuses:
+	node_statuses = mcp.master.getNodeStatus(nodelist)
+	for node, details in node_statuses.iteritems():
 		print "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
 	
 
 
 def parse_nodelist(nodestr):
-	return hostparser.parsenodes.expand(nodelist,rettype=[])
+	return parsenodes.expand(nodestr,rettype=[])
 
 
 def drain_nodes(mcp, nodelist, comment):
 	scontrol_cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"'% (
 				SCONTROL_BIN,' '.join(nodelist), comment)
-	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+	result = os.system(scontrol_cmd)
+	if result != 0:
+		print "Error Draining Nodes."
+		sys.exit(2)
 	
 	set_status(mcp, 'maint', nodelist, comment)
 
@@ -147,13 +179,22 @@ def undrain_nodes(mcp, nodelist, comment=''):
 		scontrol_cmd = '%s update NodeName="%s" State="IDLE"'% (
 				SCONTROL_BIN,' '.join(nodelist))
 
-	(child_stdout, child_stdin) = os.popen2(scontrol_cmd)
+	result = os.system(scontrol_cmd)
+
+	if result != 0:
+		print "Error Draining Nodes."
+		sys.exit(2)
 	
-	set_status(mcp, 'maint', nodelist, comment)
+	set_status(mcp, 'ok', nodelist, comment)
 
 
 def set_status(mcp, status, nodelist, comment):
-	mcp.master.updateStatus(nodelist, status, comment)
+	mcp.master.updateStatus(nodelist, status, get_current_user(), comment)
+
+def get_current_user():
+	import pwd
+	import os
+	return os.getenv('SUDO_USER', pwd.getpwuid(os.getuid())[0])
 
 if __name__ == "__main__":
 	main()
