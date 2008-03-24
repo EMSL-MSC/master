@@ -12,3 +12,11 @@ To setup a local server:
 5. Load the database as the master user
     psql master -U master < server/master.sql 
 
+
+
+To install on chinook-test:
+python setup.py build --chinook
+sudo python setup.py install_lib
+sudo python setup.py install_scripts --chinook -d /  
+sudo python setup.py install_data
+

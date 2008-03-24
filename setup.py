@@ -56,7 +56,18 @@ class local_bdist_rpm(bdist_rpm):
 			self.post_install = 'misc/redhat_post_install'
 		self.fix_python = True
 		bdist_rpm.finalize_options(self)
-			
+
+#crappy chinook hack
+import sys
+if "--chinook" in sys.argv:
+	sys.argv.remove("--chinook")
+	paths = ['/hptc_cluster/mscf/bin/',"/etc/init.d","/hptc_cluster/mscf/sbin/"]
+else:
+	paths = ['/usr/bin/',"/etc/init.d","/usr/sbin"]
+scr = [['client/master','client/sark','client/nadmin'], ["client/master-sark"], ["server/mcp"] ]
+thescripts = zip (paths,scr)
+
+
 setup(name='master', version='0.1',
 	author="Evan Felix",
 	author_email="e@pnl.gov",
@@ -65,7 +76,7 @@ setup(name='master', version='0.1',
 	package_dir= {'master':'lib/master'},
 	packages=['master'],
 
-	scripts = [('/usr/bin/',['client/master','client/sark','client/nadmin']), ("/etc/init.d",["client/master-sark"]),("/usr/sbin",["server/mcp"])],
+	scripts = thescripts,
 	data_files = [('/etc/',['misc/mcp.conf'])],
 	requires=['python (>=2.4)','hostparser','postgresql-python'],
 	cmdclass = { 
