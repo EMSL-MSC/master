@@ -140,7 +140,7 @@ def check_drained(nodelist):
 		lparts = line.split()
 		node_name = lparts[0].split('=')[1].strip()
 		state = lparts[1].split('=')[1].strip()
-		if state == 'IDLE+DRAIN':
+		if state.find('ALLOC') < 0 and state.find('DRAIN') >= 0:
 			drained.append(node_name)
 	
 		line = child_stdout.readline().strip()
