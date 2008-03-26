@@ -172,12 +172,10 @@ def drain_nodes(mcp, nodelist, comment):
 
 
 def undrain_nodes(mcp, nodelist, comment=''):
+	scontrol_cmd = '%s update NodeName="%s" State="RESUME"'% (
+			SCONTROL_BIN,' '.join(nodelist))
 	if comment != '':
-		scontrol_cmd = '%s update NodeName="%s" State="IDLE" Reason="%s"'% (
-					SCONTROL_BIN,' '.join(nodelist), comment)
-	else:
-		scontrol_cmd = '%s update NodeName="%s" State="IDLE"'% (
-				SCONTROL_BIN,' '.join(nodelist))
+		scontrol_cmd += 'Reason="%s"'% (comment,)
 
 	result = os.system(scontrol_cmd)
 
