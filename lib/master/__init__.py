@@ -14,6 +14,8 @@ config = {
 	"database_name"     : "master",
 	"database_user"     : "master",
 	"database_password" : "",
+	"database_min_connections" : "3",
+	"database_max_connections" : "5",
 	"hpacucli"          : "/home/efelix/hpacucli/bld/.hpacucli",
 }
 

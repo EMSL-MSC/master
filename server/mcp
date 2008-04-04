@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 Below any parameter requiring a node, status, user, or property accepts a symbolic name such as 'eth0' or 'cu3cn34'
 """
@@ -6,21 +6,50 @@ Below any parameter requiring a node, status, user, or property accepts a symbol
 import os
 import sys
 import socket
-import pwd
-import master.masterXMLRPCServer as mxs
-import pgdb
 import getopt
+import time
 import master
-from time import *
 from xmlrpclib import Fault
+from twisted.enterprise import adbapi
+from twisted.internet import reactor, task
+from twisted.web import xmlrpc, server, http
+from twisted.names import client
 
 debug = False
 
-connection=None
+connPool=None
+#def dbRO(function):
+#	def newfunc(*arguments):
+#		try:
+#			connection = connPool.acquire()
+#		except pgdb.InternalError, e:
+#			raise Failure(30, "Database Error, Try again later", e)
+#		try:
+#			replayCommandQueue(connection)
+#			return function(connection, *arguments)
+#		finally:
+#			connPool.release(connection)
+#	newfunc.__name__ = function.__name__
+#	return newfunc
+#
+#def dbRW(function):
+#	def newfunc(*arguments):
+#		try:
+#			connection = connPool.acquire()
+#		except pgdb.InternalError, e:
+#			commandQueue.append((function, arguments))
+#			raise Failure(40, "Database Error, Update queued", e)
+#		try:
+#			replayCommandQueue(connection)
+#			return function(connection,*arguments)
+#		finally:
+#			connPool.release(connection)
+#	newfunc.__name__ = function.__name__
+#	return newfunc
 
 def epochTo8601(epoch):
 	try:
-		return strftime("%F %T", localtime(epoch))
+		return time.strftime("%F %T", time.localtime(epoch))
 	except TypeError:
 		return epoch
 
@@ -29,372 +58,325 @@ def Failure(code,message,srvdbg=""):
 	master.debug("Failure %s:%s:%s"%tuple([str(x) for x in code,message,srvdbg]))
 	return Fault(code,message)
 		
-@mxs.rpc
-def addNode(name):
-	"""addNode(name) -> Boolean
+class Master(xmlrpc.XMLRPC):
+	"base master class"
+	def render(self, request):
+		"Always allow localhost, only authorize clients which are already inserted in the db"
+
+		def returnError(msg):
+			request.setResponseCode(http.UNAUTHORIZED)
+        		request.finish()
+			master.debug("Error in Authorization: "+msg)
+			
+		def checkCount(res):
+			if res[0][0] > 0:
+				return xmlrpc.XMLRPC.render(self, request)
+			else:
+				returnError("Host not found in Database")
+
+		def dbLookup(res):
+			hostname = str(res[0][0].payload.name)
+			for i in self.search:
+				ind = hostname.rfind(i)
+				if ind != -1:
+					hostname = hostname[0:ind-1]
+					break
+			connPool.runQuery("select count(*) from node where name = %(client_name)s", {"client_name":hostname}
+					).addCallback(checkCount
+					).addErrback(returnError)
+
+		if request.client.host == "127.0.0.1" or master.config["mcp_host_authorization"] == False:
+			return xmlrpc.XMLRPC.render(self, request)
+		else:
+			client.lookupPointer('.'.join(request.client.host.split('.')[::-1]) + '.in-addr.arpa'
+						).addCallback(dbLookup
+						).addErrback(returnError)
+			self.search = []
+			for i in open("/etc/resolv.conf"):
+				if i.find("search") == 0 or i.find("domain") == 0:
+					self.search += i[:-1].split()[1:]
+			self.search.sort(lambda l,r: len(r) - len(l))
+			return server.NOT_DONE_YET
+
+
+class MasterXMLRPCServer(xmlrpc.XMLRPC):
+	#@dbRW
+	def xmlrpc_addNode(self, name):
+		"""addNode(name) -> Boolean
+		
+		Create a new node. 
+		Returns new nodes unique ID or xmlrpclib.Fault on Error"""
+		return connPool.runOperation("insert into node (name) values (%(name)s)", {"name":name}
+			).addCallback(lambda a: True
+			).addErrback(lambda a: Failure(10, "addNode failed for %s"%name, a))
+	xmlrpc_addNode.signature = [["bool","string"]]
+
+	#@dbRO
+	def xmlrpc_getNodes(self, filter=False):
+		"""getNodes(filter=False) -> ['name1','name2',...]
+		
+		Get a list of nodes
+		filter - A filter on what names should be returned. uses standard sql wildcards (i.e. n% matches n10)
+		"""
+		return connPool.runQuery("select name from node" + {True:" where name like %(filter)s",False:""}[filter!=False], {"filter":filter}
+			).addErrback(lambda a: Failure(20,"getNodes failed: filter=%s"%(str(filter)),a))
+	xmlrpc_getNodes.signature = [["array"], ["array", "string"]]
+
+	#@dbRW
+	def xmlrpc_addStatus(self, name,desc = ''):
+		"""addStatus(name,desc = '') -> Boolean
+		
+		Create a new status type, with name and descripition.  
+		Returns new status ID or xmlrpclib.Fault on error"""
+		return connPool.runOperation("insert into status (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc}
+			).addCallback(lambda a: True
+			).addErrback(lambda msg: Failure(10,"addStatus failed for %s:%s"%(name,desc),msg))
+	xmlrpc_addStatus.signature = [["bool", "string"], ["bool", "string", "string"]]
 	
-	Create a new node. 
-	Returns new nodes unique ID or xmlrpclib.Fault on Error"""
-	curs = connection.cursor()
-	try:
-		curs.execute("insert into node (name) values (%(name)s)", {"name":name})
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(10,"addNode failed for %s"%(name),msg)
-
-@mxs.rpc
-def getNodes(filter=False):
-	"""getNodes(filter=False) -> ['name1','name2',...]
 	
-	Get a list of nodes
-	filter - A filter on what names should be returned. uses standard sql wildcards (i.e. n% matches n10)
-	"""
-	retList = []
-	curs = connection.cursor()
-	try:
-		curs.execute("select name from node" + {True:" where name like %(filter)s",False:""}[filter!=False], {"filter":filter})
-		connection.commit()
-		retList = curs.fetchall()
-		curs.close()
-		return retList
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(20,"getNodes failed: filter=%s"%(str(filter)),msg)
-
-@mxs.rpc
-def addStatus(name,desc = ''):
-	"""addStatus(name,desc = '') -> Boolean
+	#@dbRO
+	def xmlrpc_getStatus(self, names=False):
+		"""getStatus(names=False) -> {'name':'Description',...}
+		
+		Get a list of statuses.
+		names - a list of status names, if list is empty return all statuses
+		"""
+		return connPool.runQuery("select name, description from status" + {True:" where name in %(names)s",False:""}[names!=False], {"names":names}
+			).addCallback(lambda res: dict(res)
+			).addErrback(lambda msg: Failure(20,"getStatus failed for %s"%(str(names)), msg))
+	xmlrpc_getStatus.signature = [["struct"],["struct", "array"]]
 	
-	Create a new status type, with name and descripition.  
-	Returns new status ID or xmlrpclib.Fault on error"""
-	curs = connection.cursor()
-	try:
-		curs.execute("insert into status (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc})
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(10,"addStatus failed for %s:%s"(name,desc),msg)
-
-
-@mxs.rpc
-def getStatus(names=False):
-	"""getStatus(names=False) -> {'name':'Description',...}
+	#@dbRW
+	def xmlrpc_addProperty(self, name,desc = ''):
+		"""addProperty(name,desc = '') -> Boolean
+		
+		Create a new property type, with name and descripition.  
+		Returns new status ID or xmlrpclib.Fault on Error"""
+		return connPool.runOperation("insert into property (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc}
+			).addCallback(lambda a:True
+			).addErrback(lambda msg:Failure(10,"addProperty failed for %s:%s"%(name,desc),msg))
+	xmlrpc_addProperty.signature = [["bool", "string"], ["bool", "string", "string"]]
 	
-	Get a list of statuses.
-	names - a list of status names, if list is empty return all statuses
-	"""
-	curs = connection.cursor()
-	try:
-		curs.execute("select name, description from status" + {True:" where name in %(names)s",False:""}[names!=False], {"names":names})
-		connection.commit()
-		retDict = dict(curs.fetchall())
-		curs.close()
-		return retDict
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(20,"getStatus failed for %s"%(str(names)))
-
-@mxs.rpc
-def addProperty(name,desc = ''):
-	"""addProperty(name,desc = '') -> Boolean
+	#@dbRO
+	def xmlrpc_getProperties(self, names=False):
+		"""getProperties(names=[]) -> {'name':'Description',...}
+		
+		Get a list of properties as a dictionary
+		names - a list of property names, if list is empty return all properties
+		"""
+		return connPool.runQuery("select name, description from property" + {True:" where name in %(names)s",False:""}[names!=False], {"names":names}
+			).addCallback(lambda res: dict(res)
+			).addErrback(lambda msg: Failure(20,"getProperties failed for %s"%(str(names)), msg))
+	xmlrpc_getProperties.signature = [["struct"], ["struct", "array"]]
 	
-	Create a new property type, with name and descripition.  
-	Returns new status ID or xmlrpclib.Fault on Error"""
-	curs = connection.cursor()
-	try:
-		curs.execute("insert into property (name, description) values (%(name)s, %(desc)s)", {"name":name, "desc":desc})
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(10,"addProperty failed for %s:%s"%(name,desc),msg)
-
-@mxs.rpc
-def getProperties(names=False):
-	"""getProperties(names=[]) -> {'name':'Description',...}
+	#@dbRW
+	def xmlrpc_addUser(self, name,fullname):
+		"""addUser(name,fullname) -> Boolean
+		
+		Add a user in the database.
+		name - unique username, should match unix username such as 'efelix'
+		fullname - Printable Name of the user such as 'Evan J. Felix'
+		"""
+		return connPool.runOperation("insert into users (username,name) values (%(name)s,%(fullname)s)", {"name":name, "fullname":fullname}
+			).addCallback(lambda a: True
+			).addErrback(lambda msg: Failure(10,"addUser failed for %s:%s"%(name,fullname),msg))
+	xmlrpc_addUser.signature = [["bool", "string", "string"]]
 	
-	Get a list of properties as a dictionary
-	names - a list of property names, if list is empty return all properties
-	"""
-	curs = connection.cursor()
-	try:
-		curs.execute("select name, description from property" + {True:" where name in %(names)s",False:""}[names!=False], {"names":names})
-		connection.commit()
-		retDict = dict(curs.fetchall())
-		curs.close()
-		return retDict
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(20,"getProperties failed for %s"%(str(names)))
-
-@mxs.rpc
-def addUser(name,fullname):
-	"""addUser(name,fullname) -> Boolean
+	#@dbRO
+	def xmlrpc_getUsers(self, names=False):
+		"""getUsers(names=[]) -> {'username':'fullname',...}
+		
+		Get a list of users.  
+		names - a list of usernames, if list is empty return all users
+		"""
+		return connPool.runQuery("select username, name from users" + {True:" where username in %(names)s",False:""}[names!=False], {"names":names}
+			).addCallback(lambda res: dict(res)
+			).addErrback(lambda msg: Failure(20,"getUsers failed for %s"%(str(names)),msg))
+	xmlrpc_getUsers.signature = [["struct"], ["struct", "array"]]
 	
-	Add a user in the database.
-	name - unique username, should match unix username such as 'efelix'
-	fullname - Printable Name of the user such as 'Evan J. Felix'
-	"""
-	curs = connection.cursor()
-	try:
-		curs.execute("insert into users (username,name) values (%(name)s,%(fullname)s)", {"name":name, "fullname":fullname})
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(10,"addUser failed for %s:%s"(name,fullname),msg)
+	#FIXME I may need to get a static time when "now" is passed
+	#@dbRW
+	def xmlrpc_updateStatus(self, nodes,status,user,comment="",time="now"):
+		"""updateStatus(nodes,status,user,comment,timeistamp) -> Boolean
+		
+		Change the status of a list of nodes.  
+		Comments and timestamp are optional
+		Returns True on success, xmlrpclib.Fault on Error
+		"""
+		def updateStatus(txn, node, status, user, comment, time):
+			txn.executemany("""insert into node_status_log (node_id, status_id, time, comment, user_id) values (
+						(select id from node where name = %(node)s), 
+						(select id from status where name = %(status)s), %(time)s, %(comment)s,
+						(select id from users where username = %(user)s))""",
+						[{"node":i, "status":status, "time":epochTo8601(time), "comment":comment, "user":user} for i in nodes]
+				)
+		return connPool.runInteraction(updateStatus, nodes, status, user, comment, time
+				).addCallback(lambda a: True
+				).addErrback(lambda msg: Failure(10,"updateStatus failed for %s"%(str((nodes,status,user,comment,time))),msg))
+	xmlrpc_updateStatus.signature = [	["bool", "array", "string", "string"],
+						["bool", "array", "string", "string", "string"],
+						["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
 
-@mxs.rpc
-def getUsers(names=False):
-	"""getUsers(names=[]) -> {'username':'fullname',...}
+	#@dbRO
+	def xmlrpc_getNodeStatus(self, nodes):
+		"""getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
+		
+		Retrieve the current status of a node or set of nodes
+		The nodes parameter is a list of nodes to get status for
+		Timestamps are a POSIX timestamp
+		"""
+		#should I use subqueries for these views?
+		return connPool.runQuery("""select node.name, status.name, extract(epoch from last_change)::int4, users.username, comment 
+						from node_status, node, status, users 
+						where node_status.node_id = node.id and node_status.status_id = status.id 
+						and users.id = user_id and node.name in %(nodes)s""", {"nodes":nodes}
+			).addCallback(lambda res:dict([(i[0],[i[1],epochTo8601(i[2])] + i[3:]) for i in res])
+			).addErrback(lambda msg: Failure(20,"getNodeStatus failed for %s"%(str(nodes)),msg))
+	xmlrpc_getNodeStatus.signature = ["struct", "array"]
+
+	#@dbRO
+	def xmlrpc_getStatusHistory(self, nodes,filter=False,startTime='-infinity',endTime='infinity'):
+		"""getStatusHistory(nodes,filter=false,startTime=-infinity,endTime=inifinity) -> {'node1':[(statusName,timestamp,user,comment),...],'node2':...}
 	
-	Get a list of users.  
-	names - a list of usernames, if list is empty return all users
-	"""
-	curs = connection.cursor()
-	try:
-		curs.execute("select username, name from users" + {True:" where username in %(names)s",False:""}[names!=False], {"names":names})
-		connection.commit()
-		retDict = dict(curs.fetchall())
-		curs.close()
-		return retDict
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(20,"getUsers failed for %s"%(str(names)))
-
-#FIXME I may need to get a static time when "now" is passed
-@mxs.rpc
-def updateStatus(nodes,status,user,comment="",time="now"):
-	"""updateStatus(nodes,status,user,comment,timeistamp) -> Boolean
+		Retrieve a ordered list of status changes in a time period for a list of nodes
+		Nodes that are not in the system will be silently ignored.
 	
-	Change the status of a list of nodes.  
-	Comments and timestamp are optional
-	Returns True on success, xmlrpclib.Fault on Error
-	"""
-	retVal = []
-	curs = connection.cursor()
-	try:
-		curs.executemany("insert into node_status_log (node_id, status_id, time, comment, user_id) values ((select id from node where name = %(node)s), (select id from status where name = %(status)s), %(time)s, %(comment)s, (select id from users where username = %(user)s))", [{"node":i, "status":status, "time":epochTo8601(time), "comment":comment, "user":user} for i in nodes])
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		raise Failure(10,"updateStatus failed for %s"%(str((nodes,status,user,comment,time))),msg)
+		filter - set of status names that are allowed to be returned
+		*Time - Date & Time for start and end of data requested.  
+		
+		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+		"""
+		def format_history(res):
+			ret = {}
+			for i in res:
+				try:
+					ret[i[0]] += [[i[1],epochTo8601(i[2])] + i[3:]]
+				except KeyError:
+					ret[i[0]] = [[i[1],epochTo8601(i[2])] + i[3:]]
+			return ret
 
-@mxs.rpc
-def getNodeStatus(nodes):
-	"""getNodeStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
-	
-	Retrieve the current status of a node or set of nodes
-	The nodes parameter is a list of nodes to get status for
-	Timestamps are a POSIX timestamp
-	"""
-	retDict = {}
-	curs = connection.cursor()
-	try:
-#should I use subqueries for these views?
-		curs.execute("select node.name, status.name, extract(epoch from last_change)::int4, users.username, comment from node_status, node, status, users where node_status.node_id = node.id and node_status.status_id = status.id and users.id = user_id and node.name in %(nodes)s", {"nodes":nodes})
-		for i in curs.fetchall():
-			retDict[i[0]] = i[1:]
-		return retDict
-	except pgdb.DatabaseError, msg:
-		connection.rollback()
-		raise Failure(20,"getNodeStatus failed for %s"%(str(nodes)))
-
-@mxs.rpc
-def getStatusHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
-	"""getStatusHistory(nodes,filter=false,startTime=-infinity,endTime=inifinity) -> {'node1':[(statusName,timestamp,user,comment),...],'node2':...}
-
-	Retrieve a ordered list of status changes in a time period for a list of nodes
-	Nodes that are not in the system will be silently ignored.
-
-	filter - set of status names that are allowed to be returned
-	*Time - Date & Time for start and end of data requested.  
-	
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-	"""
-	retDict = {}
-	curs = connection.cursor()
-	try:
-		sql = ("""select node.name, s.name, extract(epoch from time), users.username, comment 
+		return connPool.runQuery("""select node.name, s.name, extract(epoch from time), users.username, comment 
 				from node_status_log, node, status s, users
 				where node.id = node_id and s.id = status_id and users.id = user_id
 				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
 				{True:"", False:"and s.name in %(status)s "}[filter == False] +
- 				"order by time")
-		curs.execute(sql, 		{"nodes":nodes, "status":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)})
-		for i in curs.fetchall():
-			try:
-				retDict[i[0]] += [i[1:]]
-			except KeyError:
-				retDict[i[0]] = [i[1:]]
-		return retDict
-	except pgdb.DatabaseError, e:
-		connection.rollback()
-		raise Failure(20, "getStatusHistory Failed for %s"%(str((nodes,filter,startTime,endTime))),msg)
-
-@mxs.rpc
-def updateNodeProperty(node,property,propertyValue,comment="",time="now"):
-	"""updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
+	 			"order by time", {"nodes":nodes, "status":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)}
+				).addCallback(format_history
+				).addErrback(lambda msg: Failure(20, "getStatusHistory Failed for %s"%(str((nodes,filter,startTime,endTime))),msg))
+	xmlrpc_getStatusHistory.signature = [	["struct", "array"],
+					["struct", "array", "string"],
+					["struct", "array", "string", "dateTime.iso8601"],
+					["struct", "array", "string", "dateTime.iso8601", "dateTime.iso8601"]]
 	
-	Update a property value of a list of nodes.
-		node		- node to set the property on
-		property	- Property to change, name
-		propertyValue	- value to change property to.
-		comment		- user comment on this change
-		time		- a timestamp for the change.  Defaults to 'now'
-	
-	Returns timestamp of change, or xmlrpclib.Fault on error
+	#FIXME return bool or timestamp?
+	#@dbRW
+	def xmlrpc_updateNodeProperty(self, node,property,propertyValue,comment="",time="now"):
+		"""updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
 		
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-	"""
-	retVal = []
-	curs = connection.cursor()
-	try:
-		curs.execute("insert into node_properties_log (node_id, property_id, time, value, comment) values ((select id from node where name = %(node)s), (select id from property where name = %(property)s), %(time)s, %(propertyValue)s, %(comment)s)", {"node":node, "property":property, "time":epochTo8601(time), "propertyValue":propertyValue, "comment":comment})
-		connection.commit()
-		curs.close()
-		return True
-	except pgdb.DatabaseError,msg:
-		master.debug("updateNodeProperty error:"+str(msg))
-		connection.rollback()
-		raise Failure(10,"updateNodeProperty failed for %s"%(str((node,property,propertyValue,comment,time))),msg)
-
-@mxs.rpc
-def getNodeProperties(nodes,filter=False):
-	"""getNodeProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
-	
-	Retrieve the current properties of the given nodes.
-	a filter is a list of id's allowed ("eth0mac","eth1mac")
-	Returns a dictionary of tuples containing (propName,value,timestamp,comment)
-	Timestamps are a POSIX timestamp
-	"""
-
-	retVal = {}
-	curs = connection.cursor()
-	if type(filter) == type(""):
-		filter = [filter]
-	try:
-		curs.execute("""select node.name, property.name, value, extract(epoch from last_change)::int4, comment 
-				from node_properties, node, property 
-				where node_properties.node_id = node.id and node_properties.property_id = property.id
-				and node.name in %(nodes)s """ +
-				{True:"", False:"and property.name in %(filter)s "}[filter == False] +
-				"order by last_change",
-				{"nodes":nodes, "filter":filter})
-		for i in curs.fetchall():
-			try:
-				retVal[i[0]].append(i[1:])
-			except KeyError:
-				retVal[i[0]] = [i[1:]]
-		return retVal
-	except pgdb.DatabaseError, msg:
-		connection.rollback()
-		raise Failure(20,"getNodeProperties failed for %s"(str((nodes,filter))),msg)
-
-@mxs.rpc
-def getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity'):
-	"""getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
-	
-	Retrieve all property change logs for a given period.
-	If a time period is not specified returns all records.
-	
-	filter is a list of property names allowed ("eth0mac","eth1mac")
-	*Time - Date & Time for start and end of data requested
-	Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-	"""
-	retDict = {}
-	curs = connection.cursor()
-	try:
-		curs.execute("""select node.name, p.name, value, extract(epoch from time)::int4, comment 
-				from node_properties_log, node, property p where node.id = node_id and p.id = property_id 
-				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
-				{True:"", False:"and p.name in %(filter)s "}[filter == False] +
- 				"order by time",
-				{"nodes":nodes, "filter":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)})
-		for i in curs.fetchall():
-			try:
-				retDict[i[0]] += [i[1:]]
-			except KeyError:
-				retDict[i[0]] = [i[1:]]
-		return retDict
-		connection.commit()
-		curs.close()
-		return retDict
-	except pgdb.DatabaseError,msg:
-		connection.rollback()
-		master.debug("getNodePropertyHistory error:"+str(msg))
-		raise Failure("getNodePropertyHistory failed for %s"%(str((nodes,filter,startTime,endTime))),msg)
-
-@mxs.rpc
-def getNodesFilter(*kwargs):
-	"""getNodesFilter(*kwargs) -> list
-	
-	The following keyword arguments take a string or list of strings
-	
-	status
-	statuslike
-	property
-	propertylike
-	propvalue
-	propvaluelike
-	node
-	nodelike
-	user
-	userlike
-	
-	These arguments take a time value the is a string value such as 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-	startTime
-	endTime
-	
-	Examples:
-		getNodesFilter(nodelike="cut",status="ok")
-		getNodesFilter(nodelike=("cut","director"),status="dead")
-	"""
-	return Failure("Kenny has not implemented me yet",None)
-	
-@mxs.rpc
-def serverTime():
-	"""serverTime -> float
-
-	returns the current time of the server as a POSIX timestamp
-	"""
-
-	curs = connection.cursor()
-	curs.execute("select extract(epoch from now())::int4")
-	result = curs.fetchone()
-
-	return result[0]
-
-
-def authConnection(rh):
-	"Always allow localhost, only authenticate clients which are already inserted in the db"
-	
-	if rh.client_address[0] == "127.0.0.1":
-		return 1
-	else:
-		try:
-			client = socket.gethostbyaddr(rh.client_address[0])
-			client_name = client[0].split(".")[0]
-			if socket.gethostbyname(client_name) not in client[2]:
-				return 0
-			curs = connection.cursor()
-			curs.execute("select * from node where name = %(client_name)s", {"client_name":client_name})
-			if not curs.rowcount:
-				master.debug("Rejecting client connection: "+str(client)+":"+client_name)
-			return curs.rowcount
-		except socket.gaierror, msg:
-			return Failure("Authorization Error: ",msg)
+		Update a property value of a list of nodes.
+			node		- node to set the property on
+			property	- Property to change, name
+			propertyValue	- value to change property to.
+			comment		- user comment on this change
+			time		- a timestamp for the change.  Defaults to 'now'
+		
+		Returns timestamp of change, or xmlrpclib.Fault on error
 			
+		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+		"""
+		return connPool.runOperation("""insert into node_properties_log (node_id, property_id, time, value, comment)
+						values ((select id from node where name = %(node)s),
+						(select id from property where name = %(property)s),
+						%(time)s, %(propertyValue)s, %(comment)s)""",
+						{"node":node, "property":property, "time":epochTo8601(time),
+						"propertyValue":propertyValue, "comment":comment}
+						).addCallback(lambda a: True
+						).addErrback(lambda msg: Failure(10,"updateNodeProperty failed for %s"%(str((node,property,propertyValue,comment,time))),msg))
+	xmlrpc_updateNodeProperty.signature = [	["dateTime.iso8601", "string", "string", "string"],
+						["dateTime.iso8601", "string", "string", "string", "string"],
+						["dateTime.iso8601", "string", "string", "string", "string", "dateTime.iso8601"]]
+	
+	#@dbRO
+	def xmlrpc_getNodeProperties(self, nodes,filter=False):
+		"""getNodeProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+		
+		Retrieve the current properties of the given nodes.
+		a filter is a list of id's allowed ("eth0mac","eth1mac")
+		Returns a dictionary of tuples containing (propName,value,timestamp,comment)
+		Timestamps are a POSIX timestamp
+		"""
+	
+		def format_properties(res):
+			retVal = {}
+			for i in res:
+				try:
+					retVal[i[0]].append([i[1], i[2], epochTo8601(i[3]), i[4]])
+				except KeyError:
+					retVal[i[0]] = [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+			return retVal
+
+		if type(filter) == type(""):
+			filter = [filter]
+		return connPool.runQuery("""select node.name, property.name, value, extract(epoch from last_change)::int4, comment 
+					from node_properties, node, property 
+					where node_properties.node_id = node.id and node_properties.property_id = property.id
+					and node.name in %(nodes)s """ +
+					{True:"", False:"and property.name in %(filter)s "}[filter == False] +
+					"order by last_change",
+					{"nodes":nodes, "filter":filter}
+					).addCallback(format_properties
+					).addErrback(lambda msg: Failure(20,"getNodeProperties failed for %s"%(str((nodes,filter))),msg))
+	xmlrpc_getNodeProperties.signature = [["struct", "array"], ["struct", "array", "string"], ["struct", "array", "array"]]
+	
+	#@dbRO
+	def xmlrpc_getNodePropertyHistory(self, nodes,filter=False,startTime='-infinity',endTime='infinity'):
+		"""getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+		
+		Retrieve all property change logs for a given period.
+		If a time period is not specified returns all records.
+		
+		filter is a list of property names allowed ("eth0mac","eth1mac")
+		*Time - Date & Time for start and end of data requested
+		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+		"""
+		def formatNodePropertyHistory(res):
+			retDict = {}
+			for i in res:
+				try:
+					retDict[i[0]] += [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+				except KeyError:
+					retDict[i[0]] = [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+			return retDict
+
+		return connPool.runQuery("""select node.name, p.name, value, extract(epoch from time)::int4, comment 
+					from node_properties_log, node, property p where node.id = node_id and p.id = property_id 
+					and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
+					{True:"", False:"and p.name in %(filter)s "}[filter == False] +
+					 "order by time",
+					{"nodes":nodes, "filter":filter, "start":epochTo8601(startTime), "end":epochTo8601(endTime)}
+			).addCallback(formatNodePropertyHistory
+			).addErrback(lambda msg: Failure(20,"getNodePropertyHistory failed for %s"%(str((nodes,filter,startTime,endTime))),msg))
+	
+	xmlrpc_getNodePropertyHistory.signature = [	["struct", "array"],
+							["struct", "array", "array"],
+							["struct", "array", "array", "dateTime.iso8601"],
+							["struct", "array", "array", "dateTime.iso8601", "dateTime.iso8601"]]
+	#@dbRO
+	def xmlrpc_serverTime(self):
+		"""serverTime -> float
+
+		returns the current time of the server as a POSIX timestamp
+		"""
+
+		return connPool.runQuery("select extract(epoch from now())::int4"
+					).addCallback(lambda a:a[0][0]
+					).addErrback(lambda msg: Failure(20,"retrieving time failed ",msg))
+	xmlrpc_serverTime.signature = [["int"]]
+
+
+
 def daemonize(user = None, group = None):
+	import pwd
 	pid = os.fork()
 	if pid > 0:
 		sys.exit(0)
@@ -420,10 +402,10 @@ def daemonize(user = None, group = None):
 
 def main():
 	"""Function to start up the server and serve the pages till the end of time."""
-	global connection
+	global connPool
 	global debug
 
-	optlist,args = getopt.getopt(sys.argv[1:],'dc:')
+	optlist,args = getopt.getopt(sys.argv[1:],'d')
 	for (arg,val) in optlist:
 		if arg == '-d':
 			debug=1
@@ -437,19 +419,24 @@ def main():
 	else:
 		master.debug = master.basicdebug
 
-	connection = pgdb.connect(
+	#TODO make numConnections configurable
+	connPool = adbapi.ConnectionPool(
+		"pgdb",
 		user=master.config["database_user"], 
 		database=master.config["database_name"], 
 		password=master.config["database_password"],
-		host=master.config["database_server"]
+		host=master.config["database_server"],
+		cp_reconnect = True,
+		cp_min = int(master.config["database_min_connections"]),
+		cp_max = int(master.config["database_max_connections"])
 	)
 	
-	srv = mxs.MasterXMLRPCServer(("",627), authConnection)
-	while True:
-		try:
-			srv.serve_forever()
-		except pgdb.OperationalError:
-			connection = pgdb.connect(user="root", database="master")
+	m = Master()
+	mcp = MasterXMLRPCServer(True)
+	m.putSubHandler('master', mcp)
+	xmlrpc.addIntrospection(m)
+	reactor.listenTCP(627, server.Site(m))
+	reactor.run()
 
 if __name__ == "__main__":
 	try:
