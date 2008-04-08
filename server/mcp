@@ -432,7 +432,7 @@ def main():
 	)
 	
 	m = Master()
-	mcp = MasterXMLRPCServer(True)
+	mcp = MasterXMLRPCServer()
 	m.putSubHandler('master', mcp)
 	xmlrpc.addIntrospection(m)
 	reactor.listenTCP(627, server.Site(m))
