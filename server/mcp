@@ -230,7 +230,7 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 						from node_status, node, status, users 
 						where node_status.node_id = node.id and node_status.status_id = status.id 
 						and users.id = user_id and node.name in %(nodes)s""", {"nodes":nodes}
-			).addCallback(lambda res:dict([(i[0],[i[1],epochTo8601(i[2])] + i[3:]) for i in res])
+			).addCallback(lambda res:dict([(i[0],i[1:]) for i in res])
 			).addErrback(lambda msg: Failure(20,"getNodeStatus failed for %s"%(str(nodes)),msg))
 	xmlrpc_getNodeStatus.signature = ["struct", "array"]
 
@@ -250,9 +250,9 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 			ret = {}
 			for i in res:
 				try:
-					ret[i[0]] += [[i[1],epochTo8601(i[2])] + i[3:]]
+					ret[i[0]] += [i[1:]]
 				except KeyError:
-					ret[i[0]] = [[i[1],epochTo8601(i[2])] + i[3:]]
+					ret[i[0]] = [i[1:]]
 			return ret
 
 		return connPool.runQuery("""select node.name, s.name, extract(epoch from time), users.username, comment 
@@ -265,8 +265,8 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 				).addErrback(lambda msg: Failure(20, "getStatusHistory Failed for %s"%(str((nodes,filter,startTime,endTime))),msg))
 	xmlrpc_getStatusHistory.signature = [	["struct", "array"],
 					["struct", "array", "string"],
-					["struct", "array", "string", "dateTime.iso8601"],
-					["struct", "array", "string", "dateTime.iso8601", "dateTime.iso8601"]]
+					["struct", "array", "string", "int"],
+					["struct", "array", "string", "int", "int"]]
 	
 	#FIXME return bool or timestamp?
 	#@dbRW
@@ -310,9 +310,9 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 			retVal = {}
 			for i in res:
 				try:
-					retVal[i[0]].append([i[1], i[2], epochTo8601(i[3]), i[4]])
+					retVal[i[0]].append(i[1:5])
 				except KeyError:
-					retVal[i[0]] = [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+					retVal[i[0]] = [i[1:5]]
 			return retVal
 
 		if type(filter) == type(""):
@@ -343,9 +343,9 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 			retDict = {}
 			for i in res:
 				try:
-					retDict[i[0]] += [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+					retDict[i[0]] += [i[1:5]]
 				except KeyError:
-					retDict[i[0]] = [[i[1], i[2], epochTo8601(i[3]), i[4]]]
+					retDict[i[0]] = [i[1:5]]
 			return retDict
 
 		return connPool.runQuery("""select node.name, p.name, value, extract(epoch from time)::int4, comment 
@@ -359,8 +359,8 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 	
 	xmlrpc_getNodePropertyHistory.signature = [	["struct", "array"],
 							["struct", "array", "array"],
-							["struct", "array", "array", "dateTime.iso8601"],
-							["struct", "array", "array", "dateTime.iso8601", "dateTime.iso8601"]]
+							["struct", "array", "array", "int"],
+							["struct", "array", "array", "int", "int"]]
 	#@dbRO
 	def xmlrpc_serverTime(self):
 		"""serverTime -> float
