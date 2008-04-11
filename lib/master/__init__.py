@@ -17,10 +17,10 @@ config = {
 	"database_min_connections" : 3,
 	"database_max_connections" : 5,
 	"hpacucli"          : "/home/efelix/hpacucli/bld/.hpacucli",
-	"mcp_port" : 627,
+	"mcp_port"          : 627,
 	"mcp_host_authorization" : True,
-	"web_interface" : False,
-	"web_directory" : "/usr/share/mcp/web"
+	"web_interface"     : False,
+	"web_directory"     : "/usr/share/mcp/web"
 }
 
 def load_config():

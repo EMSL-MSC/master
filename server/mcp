@@ -9,6 +9,7 @@ import socket
 import getopt
 import time
 import master
+import mimetypes
 from xmlrpclib import Fault
 from twisted.enterprise import adbapi
 from twisted.internet import reactor, task
@@ -119,9 +120,12 @@ class ForwardToWeb(resource.Resource):
 
 class MasterWebServerFile(resource.Resource, Authorizer):
 	"Lookup a file in the web_directory and return it to the client"
+	isLeaf=True
 	def render_GET(self, request):
 		def response():
-       			request.write(open(master.config["web_directory"]+"/"+request.prepath[-1]).read())
+			fullpath = "%s/%s" % (master.config["web_directory"],"/".join(request.prepath[1:]))
+			request.setHeader("Content-type",mimetypes.guess_type(fullpath)[0])
+       			request.write(open(fullpath).read())
 			request.finish()
 		return self.authorize(request, response)
 
@@ -129,6 +133,7 @@ class MasterWebServer(resource.Resource):
 	"""The base web server directory class.  If requested directly, forward to the directory. If 
 	the directory is requested, see if there is a file in the config["web_directory"] and load it
 	by calling the MasterWebServerFile class"""
+	isLeaf=False
 	def render(self, request):
 		request.setResponseCode(http.MOVED_PERMANENTLY)
 		request.setHeader("Location", "web/")
@@ -137,8 +142,11 @@ class MasterWebServer(resource.Resource):
 	def getChild(self, path, request):
 		if path == "":
 			path = request.prepath[-1] = "index.html"
-		if path in os.listdir(master.config["web_directory"]):
+		fullpath = "%s/%s/%s" % (master.config["web_directory"],"/".join(request.prepath[1:-1]),path)
+		if os.path.isfile(fullpath):
 			return MasterWebServerFile()
+		elif os.path.isdir(fullpath):
+			return MasterWebServer()
 		else:
 			return resource.Resource.getChild(self, path, request)
 
