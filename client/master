@@ -61,8 +61,8 @@ from hostparser import parsenodes
 def dt(epoch):
 	try:
 		return strftime("%F %T", localtime(epoch))
-	except TypeError:
-		master.debug("Failed to convert epoch: <"+str(epoch)+"> to string")
+	except TypeError,msg:
+		master.debug("Failed to convert epoch: <"+str(epoch)+"> to string:"+str(msg))
 		return "unknown"
 
 # Procedure:

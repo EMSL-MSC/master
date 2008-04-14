@@ -420,6 +420,36 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 							["struct", "array", "array"],
 							["struct", "array", "array", "int"],
 							["struct", "array", "array", "int", "int"]]
+
+	#@dbRO
+	def xmlrpc_getNodesFilter(self,filt):
+		"""getNodesFilter(filt) -> list
+		
+		The following keyword arguments take a string or list of strings
+		
+		status
+		statuslike
+		property
+		propertylike
+		propvalue
+		propvaluelike
+		node
+		nodelike
+		user
+		userlike
+		
+		These arguments take a time value the is a string value such as 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+		startTime
+		endTime
+		
+		Examples:
+				getNodesFilter(nodelike="cut",status="ok")
+				getNodesFilter(nodelike=("cut","director"),status="dead")
+		"""
+		return Failure("Kenny has not implemented me yet",filt)
+	
+	xmlrpc_getNodesFilter.signature = [ ["struct","struct"] ]
+							
 	#@dbRO
 	def xmlrpc_serverTime(self):
 		"""serverTime -> float
