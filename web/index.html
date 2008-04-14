@@ -10,8 +10,10 @@
 	var service = new xmlrpc.ServiceProxy("/RPC2");
 	var functions = service.system.listMethods();
 	for (var func in functions) {
-		document.write("<pre><b>" + functions[func] + ":</b><br>");
-		document.write(service.system.methodHelp(functions[func])+"</pre>");
+		if(functions[func].substring(0,7) == "master.") {
+			document.write("<pre><b>" + functions[func] + ":</b><br>");
+			document.write(service.system.methodHelp(functions[func])+"</pre>");
+		}
 	}
 </script>
 </body>
