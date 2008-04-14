@@ -148,6 +148,7 @@ class MasterWebServer(resource.Resource):
 		elif os.path.isdir(fullpath):
 			return MasterWebServer()
 		else:
+			master.debug("Error, File not found or not enough permissions: %s", fullpath)
 			return resource.Resource.getChild(self, path, request)
 
 class MasterXMLRPCBase(xmlrpc.XMLRPC, Authorizer):
@@ -463,7 +464,7 @@ def main():
 	global connPool
 	global debug
 
-	optlist,args = getopt.getopt(sys.argv[1:],'d')
+	optlist,args = getopt.getopt(sys.argv[1:],'dc:')
 	for (arg,val) in optlist:
 		if arg == '-d':
 			debug=1
