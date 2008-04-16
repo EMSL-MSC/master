@@ -123,9 +123,10 @@ def get_maint_nodes(mcp):
 	# or getNodesWithPropertyAndStatus, or something that filters earlier
 	# but instead we will get all nodes, and then get the statuses for all
 	# of the nodes and then filter.
-	node_statuses = mcp.master.getNodeStatus(mcp.master.getNodes())
+	#node_statuses = mcp.master.getNodeStatus(mcp.master.getNodes())
 
-	return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
+	#return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
+	return mcp.master.getNodesFilter({'status':'maint'})
 
 
 def check_drained(nodelist):

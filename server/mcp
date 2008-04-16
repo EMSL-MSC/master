@@ -486,7 +486,7 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 			sql += " and node_properties.value like %(propvaluelike)s"
 		if "user" in keys:
 			sql += " and node_status.user_id = (select id from users where username = %(user)s)"
-		elif "user" in keys:
+		elif "userlike" in keys:
 			sql += " and node_status.user_id = (select id from users where username like %(user)s)"
 
 		return connPool.runQuery(sql, filt
