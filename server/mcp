@@ -446,9 +446,54 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 				getNodesFilter(nodelike="cut",status="ok")
 				getNodesFilter(nodelike=("cut","director"),status="dead")
 		"""
-		return Failure("Kenny has not implemented me yet",filt)
+
+		keys = filt.keys()
+		joinStatus = ("status" in keys or "statuslike" in keys or "user" in keys or "userlike" in keys)
+		joinProperty = ("property" in keys or "propertylike" in keys
+				or "propvalue" in keys or "propvaluelike" in keys)
+				#or "user" in keys or "userlike" in keys)
+		sql  = "select node.name from node"
+		if joinStatus:
+			sql += ", status, node_status"
+		if joinProperty:
+			sql += ", property, node_properties"
+		if len(keys) > 0:
+			sql += " where"
+		if joinStatus:
+			sql += " node.id = node_status.node_id and node_status.status_id = status.id"
+		if joinStatus and joinProperty:
+			sql += " and"
+		if joinProperty:
+			sql += " node.id = node_properties.node_id and node_properties.property_id = property.id"
+		if "node" in keys or "nodelike" in keys:
+			if joinStatus or joinProperty:
+				sql += " and"
+			if "node" in keys:
+				sql += " node.name = %(node)s"
+			else:
+				sql += " node.name like %(nodelike)s"
+		if "status" in keys:
+			sql += " and status.name = %(status)s"
+		elif "statuslike" in keys:
+			sql += " and status.name like %(statuslike)s"
+		if "property" in keys:
+			sql += " and property.name = %(property)s"
+		elif "propertylike" in keys:
+			sql += " and property.name like %(propertylike)s"
+		if "propvalue" in keys:
+			sql += " and node_properties.value = %(propvalue)s"
+		elif "propvaluelike" in keys:
+			sql += " and node_properties.value like %(propvaluelike)s"
+		if "user" in keys:
+			sql += " and node_status.user_id = (select id from users where username = %(user)s)"
+		elif "user" in keys:
+			sql += " and node_status.user_id = (select id from users where username like %(user)s)"
+
+		return connPool.runQuery(sql, filt
+			).addCallback(lambda a: [i[0] for i in a]
+			).addErrback(lambda msg: Failure(20,"getNodeFilter failed for %s"%(str(filt)),msg))
 	
-	xmlrpc_getNodesFilter.signature = [ ["struct","struct"] ]
+	xmlrpc_getNodesFilter.signature = [ ["struct","array"] ]
 							
 	#@dbRO
 	def xmlrpc_serverTime(self):
