@@ -10,9 +10,10 @@ nadmin - Node administration utility.
 		-o	Remove Nodes From Use.
 		-c	Check for nodes to be worked on.
 	
-	-w <NodeList>	A list of nodes to perform the action on.
-	-r <comment>	A comment for the action.
-	-h 		Display this message.
+	-w <NodeList>		A list of nodes to perform the action on.
+	-r <comment>		A comment for the action.
+	-l	--history	Display output in long format showing history.
+	-h 			Display this message.
 """
 
 import master
@@ -28,7 +29,7 @@ DEBUG=False
 
 def main():
 	try:
-		(options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:d', ['config='])
+		(options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
 	except getopt.GetoptError:
 		print usage
 		sys.exit(1)
@@ -40,6 +41,11 @@ def main():
 	
 	if '-d' in args:
 		DEBUG = True
+	
+	if '-l' in args or '--history' in args:
+		HISTORY=True
+	else:
+		HISTORY=False
 
 	try:
 		mcp = setup_mcp(args)
@@ -59,7 +65,7 @@ def main():
 			maintnodes = get_maint_nodes(mcp)
 			maintnodes = check_available_for_work(maintnodes, clusterCommands)
 			if len(maintnodes) > 0:
-				print_maint_nodes(mcp, maintnodes)
+				print_maint_nodes(mcp, maintnodes, HISTORY)
 			else:
 				print "No nodes available for maintenance."
 		except:
@@ -130,10 +136,28 @@ def check_available_for_work(nodelist, clusterCommands):
 	nodestate = clusterCommands.check_nodes_in_use(nodelist)
 	return [node for (node, val) in nodestate.iteritems() if not val]
 
-def print_maint_nodes(mcp, nodelist):
-	node_statuses = mcp.master.getNodeStatus(nodelist)
+def print_maint_nodes(mcp, nodelist, history=False):
+	if history:
+		node_status_history = mcp.master.getStatusHistory(nodelist)
+		node_statuses = {}
+		for (node, status_list) in node_status_history.iteritems():
+			first_index = 0
+			for item in status_list.__reversed__():
+				if item[0] == 'ok':
+					first_index = status_list.index(item) + 1
+					break
+			node_statuses[node] = status_list[first_index:]
+	else:			
+		node_statuses = mcp.master.getNodeStatus(nodelist)
 	for node, details in node_statuses.iteritems():
-		print "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
+		if history:
+			status_str = "NodeName=%s:"% node
+			for item in details:
+				status_str += "\n\tStatus=%s Reason=%s"% (item[0], item[3])
+		else:
+			status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
+
+		print status_str
 
 def parse_nodelist(nodestr):
 	return parsenodes.expand(nodestr,rettype=[])

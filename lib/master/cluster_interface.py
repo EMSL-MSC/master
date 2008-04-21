@@ -65,7 +65,7 @@ class SlurmCommands(ClusterCommands):
 
 	def check_nodes_in_use(self, nodelist=[]):
 		if len(nodelist) == 0:
-			(child_stdin, child_stdout) = os.popen('%s'% self.scontrol_cmd)
+			(child_stdin, child_stdout) = os.popen2('%s show node'% self.scontrol_bin)
 			nodestatus = self.parse_slurm_output(child_stdout)
 		else:
 			nodestatus = self.get_nodes_status(nodelist)
@@ -98,8 +98,11 @@ class SlurmCommands(ClusterCommands):
 		while line:
 			line += fhandle.readline().strip()
 			lparts = line.split()
-			node_name = lparts[0].split('=')[1].strip()
-			state = lparts[1].split('=')[1]
-			retval[node_name] = state
+			try:
+				node_name = lparts[0].split('=')[1].strip()
+				state = lparts[1].split('=')[1]
+				retval[node_name] = state
+			except IndexError:
+				pass
 			line = fhandle.readline().strip()
 		return retval
