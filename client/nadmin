@@ -24,8 +24,6 @@ import sys
 from hostparser import parsenodes
 
 DEBUG=False
-SCONTROL_BIN='/opt/hptc/bin/scontrol'
-
 
 def main():
 	try:
@@ -48,15 +46,17 @@ def main():
 		print "Error connecting to the mcp."
 		sys.exit(2)
 	
+	clusterCommands = master.cluster_interface[master.config['CLUSTER_COMMANDS']](master.config['cluster_command_args'])
+
 	if '-r' in args:
 		comment = args['-r']
 	else:
 		comment = ''
-	# Check
 	if '-c' in args:
+		# Check
 		try:
 			maintnodes = get_maint_nodes(mcp)
-			maintnodes = check_drained(maintnodes)
+			maintnodes = check_drained(maintnodes, clusterCommands)
 			print_maint_nodes(mcp, maintnodes)
 		except:
 			print "No nodes available for maintenance."
@@ -79,7 +79,7 @@ def main():
 			sys.exit(2)
 
 		if len(outnodes) > 0:
-			drain_nodes(mcp, outnodes, comment)
+			mark_nodes_for_maintenance(mcp, outnodes, comment, clusterCommands)
 		else:
 			print "Missing node list."
 			sys.exit(1)
@@ -97,7 +97,7 @@ def main():
 			sys.exit(2)
 
 		if len(innodes) > 0:
-			undrain_nodes(mcp, innodes, comment)
+			make_nodes_available(mcp, innodes, comment, clusterCommands)
 		else:
 			print "Missing node list."
 			sys.exit(1)
@@ -117,73 +117,33 @@ def setup_mcp(args):
 	master.load_config()
 	return xmlrpclib.Server(master.config['server_url'])
 
-
 def get_maint_nodes(mcp):
-	# Really here we should be using a function like getNodesWithStatus
-	# or getNodesWithPropertyAndStatus, or something that filters earlier
-	# but instead we will get all nodes, and then get the statuses for all
-	# of the nodes and then filter.
-	#node_statuses = mcp.master.getNodeStatus(mcp.master.getNodes())
-
-	#return [k for (k,v) in node_statuses.iteritems() if v[0] == 'maint']
 	return mcp.master.getNodesFilter({'status':'maint'})
 
-
-def check_drained(nodelist):
+def check_drained(nodelist, clusterCommands):
 	drained = []
-	
-	scontrol_cmd = '%s show node "%s"'% (SCONTROL_BIN,' '.join(nodelist))
-	(child_stdin, child_stdout) = os.popen2(scontrol_cmd)
-
-	line = child_stdout.readline().strip()
-	while line:
-		line += child_stdout.readline().strip()
-		lparts = line.split()
-		node_name = lparts[0].split('=')[1].strip()
-		state = lparts[1].split('=')[1].strip()
-		if state.find('ALLOC') < 0 and state.find('DRAIN') >= 0:
-			drained.append(node_name)
-	
-		line = child_stdout.readline().strip()
-
-	return drained
-			
-
+	return clusterCommands.check_nodes_in_use(nodelist)
 
 def print_maint_nodes(mcp, nodelist):
 	node_statuses = mcp.master.getNodeStatus(nodelist)
 	for node, details in node_statuses.iteritems():
 		print "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
-	
-
 
 def parse_nodelist(nodestr):
 	return parsenodes.expand(nodestr,rettype=[])
 
-
-def drain_nodes(mcp, nodelist, comment):
-	scontrol_cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"'% (
-				SCONTROL_BIN,' '.join(nodelist), comment)
-	result = os.system(scontrol_cmd)
+def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
+	result = clusterCommands.mark_nodes_for_maint(comment, nodelist)
 	if result != 0:
-		print "Error Draining Nodes."
+		print "Error Setting Maintenance Mode."
 		sys.exit(2)
-	
 	set_status(mcp, 'maint', nodelist, comment)
 
-
-def undrain_nodes(mcp, nodelist, comment=''):
-	scontrol_cmd = '%s update NodeName="%s" State="RESUME"'% (
-			SCONTROL_BIN,' '.join(nodelist))
-	if comment != '':
-		scontrol_cmd += 'Reason="%s"'% (comment,)
-
-	result = os.system(scontrol_cmd)
-
+def make_nodes_available(mcp, nodelist, comment, clusterCommands):
+	result = clusterCommands.mark_nodes_available(nodelist, comment)
 	if result != 0:
-		print "Error Draining Nodes."
+		print "Error Marking Nodes Available."
 		sys.exit(2)
-	
 	set_status(mcp, 'ok', nodelist, comment)
 
 
