@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-class ClusterCommands(Object):
+import os
+import sys
+
+class ClusterCommands(object):
 	def get_node_status(self, nodename):
 		"""get_node_status(nodename) -> string
 
@@ -53,24 +56,24 @@ class SlurmCommands(ClusterCommands):
 		self.scontrol_cmd = self.scontrol_bin + ' show node "%s"'
 
 	def get_node_status(self, nodename):
-		(child_stdin, child_stdout) = os.popen2('%s "%s"'% (self.scontrol_cmd, nodename)
+		(child_stdin, child_stdout) = os.popen2('%s "%s"'% (self.scontrol_cmd, nodename))
 		return self.parse_slurm_output(child_stdout)[nodename]
 	
 	def get_nodes_status(self, nodelist):
-		(child_stdin, child_stdout) = os.popen('%s "%s"'%(self.scontrol_cmd, ' '.join(nodelist))
+		(child_stdin, child_stdout) = os.popen2(self.scontrol_cmd% (' '.join(nodelist)))
 		return self.parse_slurm_output(child_stdout)
 
 	def check_nodes_in_use(self, nodelist=[]):
 		if len(nodelist) == 0:
 			(child_stdin, child_stdout) = os.popen('%s'% self.scontrol_cmd)
-			nodestatus = parse_slurm_output(child_stdout)
+			nodestatus = self.parse_slurm_output(child_stdout)
 		else:
 			nodestatus = self.get_nodes_status(nodelist)
 		for (node, state) in nodestatus.iteritems():
 			if state.find('ALLOC') < 0 and state.find('DRAIN') >= 0:
-				nodestatus[node] = True
-			else:
 				nodestatus[node] = False
+			else:
+				nodestatus[node] = True
 		return nodestatus
 	
 	def mark_nodes_for_maint(self, comment, nodelist):
@@ -78,7 +81,7 @@ class SlurmCommands(ClusterCommands):
 				self.scontrol_bin,
 				' '.join(nodelist),
 				comment)
-		cmd_result = os.system(scontrol_cmd)
+		cmd_result = os.system(cmd)
 		return cmd_result
 	
 	def mark_nodes_available(self, nodelist, comment=''):
@@ -90,10 +93,13 @@ class SlurmCommands(ClusterCommands):
 		return os.system(cmd)
 	
 	def parse_slurm_output(self, fhandle):
-		line = child_stdout.readline().strip()
+		retval = {}
+		line = fhandle.readline().strip()
 		while line:
-			line += child_stdout.readline().strip()
+			line += fhandle.readline().strip()
 			lparts = line.split()
 			node_name = lparts[0].split('=')[1].strip()
-			state = lparts[1].split('=')
+			state = lparts[1].split('=')[1]
+			retval[node_name] = state
 			line = fhandle.readline().strip()
+		return retval

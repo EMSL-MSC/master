@@ -16,6 +16,7 @@ nadmin - Node administration utility.
 """
 
 import master
+import master.cluster_interface
 import os
 import xmlrpclib
 import getopt
@@ -46,7 +47,7 @@ def main():
 		print "Error connecting to the mcp."
 		sys.exit(2)
 	
-	clusterCommands = master.cluster_interface[master.config['CLUSTER_COMMANDS']](master.config['cluster_command_args'])
+	clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(master.config['cluster_command_args'])
 
 	if '-r' in args:
 		comment = args['-r']
@@ -56,10 +57,15 @@ def main():
 		# Check
 		try:
 			maintnodes = get_maint_nodes(mcp)
-			maintnodes = check_drained(maintnodes, clusterCommands)
-			print_maint_nodes(mcp, maintnodes)
+			maintnodes = check_available_for_work(maintnodes, clusterCommands)
+			if len(maintnodes) > 0:
+				print_maint_nodes(mcp, maintnodes)
+			else:
+				print "No nodes available for maintenance."
 		except:
-			print "No nodes available for maintenance."
+			if DEBUG:
+				raise
+			print "Error: while finding nodes for maintenance."
 	# Out
 	elif '-o' in args:
 		if '-w' not in args:
@@ -120,9 +126,9 @@ def setup_mcp(args):
 def get_maint_nodes(mcp):
 	return mcp.master.getNodesFilter({'status':'maint'})
 
-def check_drained(nodelist, clusterCommands):
-	drained = []
-	return clusterCommands.check_nodes_in_use(nodelist)
+def check_available_for_work(nodelist, clusterCommands):
+	nodestate = clusterCommands.check_nodes_in_use(nodelist)
+	return [node for (node, val) in nodestate.iteritems() if not val]
 
 def print_maint_nodes(mcp, nodelist):
 	node_statuses = mcp.master.getNodeStatus(nodelist)
