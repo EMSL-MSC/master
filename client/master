@@ -252,7 +252,7 @@ def main():
 	elif makeComment:
 		try:
 			statuses = mcp.master.getNodeStatus(nodeList)
-			print statuses
+			#print statuses
 			for node in nodeList:
 				mcp.master.updateStatus([node],statuses[node][0],pwd.getpwuid(os.getuid())[0],makeComment)
 		except xmlrpclib.Fault, e:

@@ -61,7 +61,7 @@ class local_bdist_rpm(bdist_rpm):
 import sys
 if "--chinook" in sys.argv:
 	sys.argv.remove("--chinook")
-	paths = ['/hptc_cluster/mscf/bin/',"/etc/init.d","/hptc_cluster/mscf/sbin/"]
+	paths = ['/mscf/mscf/bin/',"/etc/init.d","/mscf/mscf/sbin/"]
 else:
 	paths = ['/usr/bin/',"/etc/init.d","/usr/sbin"]
 scr = [['client/master','client/sark','client/nadmin'], ["client/master-sark"], ["server/mcp"] ]
@@ -78,7 +78,7 @@ setup(name='master', version='0.1',
 
 	scripts = thescripts,
 	data_files = [('/etc/',['misc/mcp.conf'])],
-	requires=['python (>=2.4)','hostparser','postgresql-python'],
+	#requires=['python (>=2.4)','hostparser','postgresql-python'],
 	cmdclass = { 
 	    'install_scripts': local_install_scripts, 
 	    'build_scripts': local_build_scripts, 

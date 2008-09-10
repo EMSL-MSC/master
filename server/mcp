@@ -85,6 +85,7 @@ class Authorizer:
 		def dbLookup(res):
 			"After finding the hostname, strip off the longest search domain and look it up in the db"
 			hostname = str(res[0][0].payload.name)
+			#master.debug(hostname);
 			for i in self.search:
 				ind = hostname.rfind(i)
 				if ind != -1:
@@ -98,6 +99,7 @@ class Authorizer:
 			returnAuthorized()
 			return server.NOT_DONE_YET
 		else:
+			#print request.client.host
 			#because twisted doesn't have a reverse lookup, I have to do a pointer record lookup
 			client.lookupPointer('.'.join(request.client.host.split('.')[::-1]) + '.in-addr.arpa'
 						).addCallback(dbLookup
