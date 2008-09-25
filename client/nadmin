@@ -28,6 +28,7 @@ from hostparser import parsenodes
 DEBUG=False
 
 def main():
+	global DEBUG
 	try:
 		(options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
 	except getopt.GetoptError:
@@ -137,6 +138,7 @@ def check_available_for_work(nodelist, clusterCommands):
 	return [node for (node, val) in nodestate.iteritems() if not val]
 
 def print_maint_nodes(mcp, nodelist, history=False):
+	nodelist = parsenodes.expand(','.join(nodelist),[])
 	if history:
 		node_status_history = mcp.master.getStatusHistory(nodelist)
 		node_statuses = {}
@@ -149,7 +151,8 @@ def print_maint_nodes(mcp, nodelist, history=False):
 			node_statuses[node] = status_list[first_index:]
 	else:			
 		node_statuses = mcp.master.getNodeStatus(nodelist)
-	for node, details in node_statuses.iteritems():
+	for node in nodelist:
+		details = node_statuses[node]
 		if history:
 			status_str = "NodeName=%s:"% node
 			for item in details:
