@@ -53,7 +53,7 @@ class SlurmCommands(ClusterCommands):
 		if not os.access(scontrol_bin, os.X_OK):
 			raise ArgumentError("%s is not executable or does not exist."% scontrol_bin)
 		self.scontrol_bin = scontrol_bin
-		self.scontrol_cmd = self.scontrol_bin + ' show node "%s"'
+		self.scontrol_cmd = self.scontrol_bin + ' -a show node "%s"'
 
 	def get_node_status(self, nodename):
 		(child_stdin, child_stdout) = os.popen2('%s "%s"'% (self.scontrol_cmd, nodename))
@@ -96,13 +96,14 @@ class SlurmCommands(ClusterCommands):
 		retval = {}
 		line = fhandle.readline().strip()
 		while line:
-			line += fhandle.readline().strip()
-			lparts = line.split()
-			try:
-				node_name = lparts[0].split('=')[1].strip()
-				state = lparts[1].split('=')[1]
-				retval[node_name] = state
-			except IndexError:
-				pass
+			if line.startswith('NodeName'):
+				line += fhandle.readline().strip()
+				lparts = line.split()
+				try:
+					node_name = lparts[0].split('=')[1].strip()
+					state = lparts[1].split('=')[1]
+					retval[node_name] = state
+				except IndexError:
+					pass
 			line = fhandle.readline().strip()
 		return retval
