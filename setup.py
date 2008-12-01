@@ -66,7 +66,7 @@ if "--chinook" in sys.argv:
 	paths = ['/mscf/mscf/bin/',"/etc/init.d","/mscf/mscf/sbin/"]
 else:
 	paths = ['/usr/bin/',"/etc/init.d","/usr/sbin"]
-scr = [['client/master','client/sark','client/nadmin'], ["client/master-sark"], ["server/mcp"] ]
+scr = [['client/master','client/sark','client/nadmin'], ["client/master-sark","server/master-mcp"], ["server/mcp"] ]
 thescripts = zip (paths,scr)
 
 
