@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 #from setuptools import setup,find_packages
+from distutils import sysconfig
 from distutils.core import setup
 from distutils.command.install_scripts import install_scripts
 from distutils.command.build_scripts import build_scripts
@@ -29,7 +30,8 @@ class local_build_scripts(build_scripts):
 		b.build_dir = self.build_dir+thedir
 		b.scripts = []
 		b.force = self.force
-		b.executable = self.executable 
+		if sysconfig.get_config_var("VERSION") != "2.3":
+			b.executable = self.executable 
 		b.outfiles = None
 		return b
 		
