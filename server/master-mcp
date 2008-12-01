@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# master-mcp: Run the mcp as part of the master project
+#
+# chkconfig: 2345 21 79
+# description: Master Project
+# config: /etc/mcp.conf
+#
+
+#hack for now, remove when the library is in the right place:
+export LD_LIBRARY_PATH=/home/efelix/mscf/trunk/master
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[  ${NETWORKING} = "no" ] && exit 0
+
+# make sure mcp is installed and executable
+[ -x /mscf/mscf/sbin/mcp  ] || exit 1
+
+
+# See how we were called.
+case "$1" in
+  start)
+    echo -n "Starting master-mcp: "
+    daemon /mscf/mscf/sbin/mcp
+    echo
+    touch /var/lock/subsys/mcp
+    ;;
+  stop)
+    echo -n "Shutting down master-mcp: "
+    killproc mcp
+    echo
+    rm -f /var/lock/subsys/mcp
+    ;;
+  status)
+    status mcp
+    ;;
+  restart)
+    echo -n "Restarting master-mcp: "
+    $0 stop
+	$0 start
+    echo
+    ;;
+  *)
+    echo "Usage: master-mcp {start|stop|restart|status}"
+    exit 1
+esac
+
+exit 0
