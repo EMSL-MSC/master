@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/mscf/apps/python/2.5.1/bin/python
 
 usage="""
 nadmin - Node administration utility.
@@ -23,6 +23,7 @@ import xmlrpclib
 import getopt
 import socket
 import sys
+import time
 from hostparser import parsenodes
 
 DEBUG=False
@@ -131,7 +132,7 @@ def setup_mcp(args):
 	return xmlrpclib.Server(master.config['server_url'])
 
 def get_maint_nodes(mcp):
-	return mcp.master.getNodesFilter({'status':'maint'})
+	return mcp.master.getNodesFilter({'status':'maint'}) + mcp.master.getNodesFilter({'status': 'dead'})
 
 def check_available_for_work(nodelist, clusterCommands):
 	nodestate = clusterCommands.check_nodes_in_use(nodelist)
@@ -139,26 +140,25 @@ def check_available_for_work(nodelist, clusterCommands):
 
 def print_maint_nodes(mcp, nodelist, history=False):
 	nodelist = parsenodes.expand(','.join(nodelist),[])
-	if history:
-		node_status_history = mcp.master.getStatusHistory(nodelist)
-		node_statuses = {}
-		for (node, status_list) in node_status_history.iteritems():
-			first_index = 0
-			for item in status_list.__reversed__():
-				if item[0] == 'ok':
-					first_index = status_list.index(item) + 1
-					break
-			node_statuses[node] = status_list[first_index:]
-	else:			
-		node_statuses = mcp.master.getNodeStatus(nodelist)
+	node_status_history = mcp.master.getStatusHistory(nodelist)
+	node_statuses = {}
+	for (node, status_list) in node_status_history.iteritems():
+		first_index = 0
+		status_list = [item for item in status_list if item[3] != '' or (item[3] == '' and item[0] == 'ok')]
+		status_list.sort(cmp=lambda x,y: cmp(y[1],x[1]))
+		for item in status_list:
+			if item[0] == 'ok':
+				first_index = status_list.index(item) + 1
+				break
+		node_statuses[node] = status_list[:first_index-1]
 	for node in nodelist:
 		details = node_statuses[node]
 		if history:
 			status_str = "NodeName=%s:"% node
 			for item in details:
-				status_str += "\n\tStatus=%s Reason=%s"% (item[0], item[3])
+				status_str += "\n\tStatus=%s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
 		else:
-			status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0], details[3])
+			status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0][0], details[0][3])
 
 		print status_str
 
