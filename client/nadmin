@@ -158,7 +158,10 @@ def print_maint_nodes(mcp, nodelist, history=False):
 			for item in details:
 				status_str += "\n\tStatus=%s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
 		else:
-			status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0][0], details[0][3])
+			try:
+				status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0][0], details[0][3])
+			except IndexError, e:
+				status_str = 'NodeName=%s Reason="Error Retrieving Reason."'% (node,)
 
 		print status_str
 

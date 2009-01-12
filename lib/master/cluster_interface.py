@@ -70,7 +70,7 @@ class SlurmCommands(ClusterCommands):
 		else:
 			nodestatus = self.get_nodes_status(nodelist)
 		for (node, state) in nodestatus.iteritems():
-			if state.find('ALLOC') < 0 and state.find('DRAIN') >= 0:
+			if state.find('ALLOC') < 0 and (state.find('DRAIN') >= 0 or state.find('DOWN') >= 0):
 				nodestatus[node] = False
 			else:
 				nodestatus[node] = True
