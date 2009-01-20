@@ -154,14 +154,14 @@ def print_maint_nodes(mcp, nodelist, history=False):
 	for node in nodelist:
 		details = node_statuses[node]
 		if history:
-			status_str = "NodeName=%s:"% node
+			status_str = "NodeName=%-12s:"% node
 			for item in details:
-				status_str += "\n\tStatus=%s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
+				status_str += "\n\tStatus=%-7s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
 		else:
 			try:
-				status_str = "NodeName=%s Status=%s Reason=%s"% (node, details[0][0], details[0][3])
+				status_str = "NodeName=%-12s Status=%-7s Reason=%s"% (node, details[0][0], details[0][3])
 			except IndexError, e:
-				status_str = 'NodeName=%s Reason="Error Retrieving Reason."'% (node,)
+				status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."'% (node,)
 
 		print status_str
 
