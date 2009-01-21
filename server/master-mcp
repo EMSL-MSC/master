@@ -2,7 +2,7 @@
 #
 # master-mcp: Run the mcp as part of the master project
 #
-# chkconfig: 2345 21 79
+# chkconfig: 2345 69 79
 # description: Master Project
 # config: /etc/mcp.conf
 #
