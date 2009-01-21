@@ -191,8 +191,8 @@ def getSystemInfo():
 	d.update(doLineParse(open("/proc/meminfo","r"),"mem",{"MemTotal":"total","SwapTotal":"swap"}))
 
 	if os.access('/proc/uptime', os.R_OK):
-		d['boot_time'] = time.mktime(time.localtime()) - float(
-					open('/proc/uptime').read().split()[0])
+		d['boot_time'] = int(time.mktime(time.localtime()) - float(
+					open('/proc/uptime').read().split()[0]))
 
 	return d
 
