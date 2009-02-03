@@ -55,7 +55,7 @@ import getopt
 import master.gather
 import socket
 import pwd
-from time import strftime,localtime
+from time import strftime,localtime,strptime,mktime
 from hostparser import parsenodes
 
 def dt(epoch):
@@ -98,8 +98,10 @@ def main():
 	comment=""
 	property=""
 	serverurl=""
+	start_date = None
+	end_date = None
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:n:S")
+	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:n:S", ['start-date=', 'end-date='])
 
 	if args:
 		print "Extra Arguments Given:" + str(args)
@@ -166,6 +168,22 @@ def main():
 			showAllStatuses = True
 			actioncount += 1
 
+		if arg == '--start-date':
+			try:
+				start_date = strptime(val, '%Y-%m-%d')
+			except ValueError:
+				print "start date format was not YYYY-MM-DD"
+				print usage
+				return
+		
+		if arg == '--end-date':
+			try:
+				end_date = strptime(val, '%Y-%m-%d')
+			except ValueError:
+				print "end date format was not YYYY-MM-DD"
+				print usage
+				return
+
 		if arg == "-h":
 			print usage
 			return
@@ -189,7 +207,12 @@ def main():
 	mcp = xmlrpclib.Server(master.config["server_url"])
 
 	if listProperty:
-		plog = mcp.master.getNodePropertyHistory(nodeList)
+		plog = None
+		if start_date and end_date:
+			print "Using start and end date."
+			plog = mcp.master.getNodePropertyHistory(nodeList,False,mktime(start_date),mktime(end_date))
+		else:
+			plog = mcp.master.getNodePropertyHistory(nodeList)
 		master.debug("Result of getNodePropertyHistory: "+str(plog))
 		if plog:
 			for node,logs in plog.items():
@@ -200,7 +223,12 @@ def main():
 					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
 			
 	elif listStatus:
-		slog=mcp.master.getStatusHistory(nodeList)
+		slog = None
+		if start_date and end_date:
+			print "Using start and end date:%s,%s"% (mktime(start_date),mktime(end_date))
+			slog=mcp.master.getStatusHistory(nodeList,False,mktime(start_date),mktime(end_date))
+		else:
+			slog=mcp.master.getStatusHistory(nodeList)
 		master.debug("result of getStatusHistory: "+str(slog))
 		if slog:
 			for node,logs in slog.items():
