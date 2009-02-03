@@ -206,11 +206,21 @@ def main():
 
 	mcp = xmlrpclib.Server(master.config["server_url"])
 
+	if start_date or end_date:
+		if not start_date:
+			start_date = '-infinity'
+			end_date = mktime(end_date)
+		elif not end_date:
+			end_date = 'infinity'
+			start_date = mktime(start_date)
+		else:
+			start_date = mktime(start_date)
+			end_date = mktime(end_date)
+
 	if listProperty:
 		plog = None
-		if start_date and end_date:
-			print "Using start and end date."
-			plog = mcp.master.getNodePropertyHistory(nodeList,False,mktime(start_date),mktime(end_date))
+		if start_date or end_date:
+			plog = mcp.master.getNodePropertyHistory(nodeList,False,start_date,end_date)
 		else:
 			plog = mcp.master.getNodePropertyHistory(nodeList)
 		master.debug("Result of getNodePropertyHistory: "+str(plog))
@@ -224,9 +234,8 @@ def main():
 			
 	elif listStatus:
 		slog = None
-		if start_date and end_date:
-			print "Using start and end date:%s,%s"% (mktime(start_date),mktime(end_date))
-			slog=mcp.master.getStatusHistory(nodeList,False,mktime(start_date),mktime(end_date))
+		if start_date or end_date:
+			slog=mcp.master.getStatusHistory(nodeList,False,start_date,end_date)
 		else:
 			slog=mcp.master.getStatusHistory(nodeList)
 		master.debug("result of getStatusHistory: "+str(slog))
