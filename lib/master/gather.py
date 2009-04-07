@@ -171,6 +171,35 @@ def getIBInfo(id):
 			d[_ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
 	return d
 
+def getDMIInfo():
+	info = {}
+	lines = os.popen('/usr/sbin/dmidecode').read()
+	lines = lines.split('\n')
+	category_map = { "0x0000": {'name': "bios", 'keywords': ['Vendor','Version','Release Date']},
+	                 "0x0001": {'name': "system", 'keywords': ["Manufacturer", 'Product Name', 'Version', 'Serial Number', 'UUID']},
+					 "0x0002": {'name': "chassis", 
+					 			'keywords': [
+										"Manufacturer", 'Type', 'Lock', 
+										'Version', 'Serial Number', 'Asset Tag',
+										'Height', 'Number Of Power Cords'
+										]}}
+	current_category = ''
+	for line in lines:
+		if line.startswith('Handle'):
+			current_category = line.strip().split()[1]
+			if not category_map.has_key(current_category):
+				current_category = ''
+				continue
+		if current_category:
+			test_line = line.strip()
+			for key_word in category_map[current_category]['keywords']:
+				if test_line.startswith(key_word):
+					name_str = category_map[current_category]['name'] + '.' + test_line.split(':')[0].replace(' ', '_').lower()
+					value = test_line.split(':')[1]
+					info[name_str] = value.strip()
+			
+	return info	
+
 @verb("ib")
 def getAllIBInfo():
 	"""Gather all IB card info"""
@@ -194,6 +223,8 @@ def getSystemInfo():
 		d['boot_time'] = int(time.mktime(time.localtime()) - float(
 					open('/proc/uptime').read().split()[0]))
 
+	if os.access('/usr/sbin/dmidecode', os.X_OK):
+		d.update(getDMIInfo())
 	return d
 
 @verb("all")
