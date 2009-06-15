@@ -12,8 +12,8 @@ master - general MASTER project control program
 		[ -S ]
 		[ -u username -D <User Display Name> ]
         [ -w NodeList] [ -a ]
-                       [ -l [ -f ] ]
-                       [ -p [ -f ] ]
+                       [ -l [ -f ] [ -T ]]
+                       [ -p [ -f ] [ -T ]]
                        [ -L ]
                        [ -P ]
                        [ -t <status> [ -r <comment> ] ]
@@ -98,10 +98,11 @@ def main():
 	comment=""
 	property=""
 	serverurl=""
+	timeOrdered = False
 	start_date = None
 	end_date = None
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:o:i:r:w:fu:n:S", ['start-date=', 'end-date='])
+	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:To:i:r:w:fu:n:S", ['start-date=', 'end-date='])
 
 	if args:
 		print "Extra Arguments Given:" + str(args)
@@ -148,6 +149,9 @@ def main():
 		if arg == '-P':
 			showProperty =True
 			actioncount += 1
+		
+		if arg == '-T':
+			timeOrdered = True
 
 		if arg == '-t':
 			statusValue = val
@@ -225,12 +229,23 @@ def main():
 			plog = mcp.master.getNodePropertyHistory(nodeList)
 		master.debug("Result of getNodePropertyHistory: "+str(plog))
 		if plog:
-			for node,logs in plog.items():
+			if timeOrdered:
+				logs = []
 				if not all:
-					logs=logs[-10:]
-				print node+":"
-				for l in logs:
-					print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
+					logs = [[name] + log for name,logs in plog.iteritems() for log in logs[-10:]]
+				else:
+					logs = [[name] + log for name,logs in plog.iteritems() for log in logs]
+				sorted_nodes = parsenodes.expand(','.join(plog.keys()),[])
+				logs.sort(cmp=lambda x,y: cmp((x[3],sorted_nodes.index(x[0])),(y[3],sorted_nodes.index(y[0]))))
+				for log in logs:
+					print log[0] + " ", dt(log[3]),":",log[1],"=",log[2],"   ",log[4]
+			else:
+				for node,logs in plog.items():
+					if not all:
+						logs=logs[-10:]
+					print node+":"
+					for l in logs:
+						print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
 			
 	elif listStatus:
 		slog = None
@@ -240,12 +255,23 @@ def main():
 			slog=mcp.master.getStatusHistory(nodeList)
 		master.debug("result of getStatusHistory: "+str(slog))
 		if slog:
-			for node,logs in slog.items():
+			if timeOrdered:
+				logs = []
 				if not all:
-					logs=logs[-10:]
-				print node+":"
-				for l in logs:
-					print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",l[3]
+					logs = [[name] + log for name,logs in slog.iteritems() for log in logs[-10:]]
+				else:
+					logs = [[name] + log for name,logs in slog.iteritems() for log in logs]
+				sorted_nodes = parsenodes.expand(','.join(slog.keys()),[])
+				logs.sort(cmp=lambda x,y: cmp((x[2],sorted_nodes.index(x[0])),(y[2],sorted_nodes.index(y[0]))))
+				for log in logs:
+					print log[0] + " ", dt(log[2]), ":", log[1], "by", log[3],"   C:",log[4]
+			else:
+				for node,logs in slog.items():
+					if not all:
+						logs=logs[-10:]
+					print node+":"
+					for l in logs:
+						print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",l[3]
 	
 	elif addNodes:
 		for node in nodeList:
