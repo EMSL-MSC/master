@@ -75,12 +75,14 @@ class Authorizer:
 			request.finish()
 			master.debug("Error in Authorization: "+str(msg))
 			
-		def checkCount(res):
+		def checkCount(name):
 			"if there is an entry in the db, then we can talk to this host"
-			if res[0][0] > 0:
-				return returnAuthorized()
-			else:
-				returnError("Host not found in Database")
+			def callback(res):
+				if res[0][0] > 0:
+					return returnAuthorized()
+				else:
+					returnError("Host %s not found in Database" % name)
+			return callback
 
 		def dbLookup(res):
 			"After finding the hostname, strip off the longest search domain and look it up in the db"
@@ -92,7 +94,7 @@ class Authorizer:
 					hostname = hostname[0:ind-1]
 					break
 			connPool.runQuery("select count(*) from node where name = %(client_name)s", {"client_name":hostname}
-					).addCallback(checkCount
+					).addCallback(checkCount(hostname)
 					).addErrback(returnError)
 
 		if request.client.host == "127.0.0.1" or master.config["mcp_host_authorization"] == False:
