@@ -70,7 +70,7 @@ class Authorizer:
 
 		def returnError(msg):
 			"return an unauthorized message"
-			request.setResponseCode(http.UNAUTHORIZED)
+			request.setResponseCode(http.UNAUTHORIZED, msg)
 			request.write("<html><title>Unauthorized</title><body><h1>401: Unauthorized</h1></body></html>")
 			request.finish()
 			master.debug("Error in Authorization: "+str(msg))
