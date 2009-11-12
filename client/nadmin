@@ -173,14 +173,22 @@ def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
 	if result != 0:
 		print "Error Setting Maintenance Mode."
 		sys.exit(2)
-	set_status(mcp, 'maint', nodelist, comment)
+	try:
+		set_status(mcp, 'maint', nodelist, comment)
+	except xmlrpclib.ProtocolError, e:
+		if DEBUG:
+			print "Error setting master status"
 
 def make_nodes_available(mcp, nodelist, comment, clusterCommands):
 	result = clusterCommands.mark_nodes_available(nodelist, comment)
 	if result != 0:
 		print "Error Marking Nodes Available."
 		sys.exit(2)
-	set_status(mcp, 'ok', nodelist, comment)
+	try:
+		set_status(mcp, 'ok', nodelist, comment)
+	except xmlrpclib.ProtocolError, e:
+		if DEBUG:
+			print "Error setting master status."
 
 
 def set_status(mcp, status, nodelist, comment):
