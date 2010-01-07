@@ -16,6 +16,7 @@ config = {
 	"database_password" : "",
 	"database_min_connections" : 3,
 	"database_max_connections" : 5,
+	"decode-dimms"      : "/usr/bin/decode-dimms",
 	"hpacucli"          : "/usr/sbin/hpacucli",
 	"mcp_port"          : 627,
 	"mcp_host_authorization" : True,

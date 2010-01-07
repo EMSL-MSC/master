@@ -9,7 +9,7 @@ FIXMES:
 
 import os
 import time
-from master import debug,dell,amcc,hp
+from master import debug,dell,amcc,hp,mem
 from master.util import *
 
 verbs={}
@@ -226,6 +226,14 @@ def getSystemInfo():
 	if os.access('/usr/sbin/dmidecode', os.X_OK):
 		d.update(getDMIInfo())
 	return d
+
+@verb("mem")
+def getMemoryInfo():
+	"""getMemoryInfo() -> dictionary
+
+	Gather detailed information about memory devices in the system
+	"""
+	return mem.getMemoryInfo()
 
 @verb("all")
 def gatherALL():
