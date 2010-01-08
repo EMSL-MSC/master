@@ -16,12 +16,12 @@ def getMemoryInfo():
 	bank = ''
 	found = {}
 
-	if not os.access(master.config['decode-dimms'],os.X_OK):
-		master.debug("Error finding:"+master.config['decode-dimms'])
+	if not os.access(master.config['decode_dimms'],os.X_OK):
+		master.debug("Error finding:"+master.config['decode_dimms'])
 
 		return {}
 
-	p = os.popen(master.config['decode-dimms'],"r")
+	p = os.popen(master.config['decode_dimms'],"r")
 
 	for l in p.readlines():
 		if 'bank' in l:

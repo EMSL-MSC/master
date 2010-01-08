@@ -87,9 +87,7 @@ def main():
 		current = sprops[myname]
 	else:
 		current = []
-	#allprops = mcp.master.getProperties()
 
-	# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 	for k,v,ts,cmt in current:
 		if props.has_key(k) and props[k] == v:
 			master.debug("deleting key <"+k+"> because it is already on the server")

@@ -7,9 +7,13 @@ def mapit(dict,map,prefix):
 	"""
 
 	infos={}
+	if prefix:
+		pref=prefix+"."
+	else:
+		pref=''
 	for key in dict.keys():
 		if key in map.keys():
-			infos[prefix+"."+map[key]]=dict[key]
+			infos[pref+map[key]]=dict[key]
 
 	return infos
 	

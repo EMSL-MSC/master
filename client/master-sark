@@ -8,6 +8,7 @@
 
 case "$1" in
     start)
+		/sbin/modprobe eeprom
 	    /usr/bin/sark >> /var/log/sark.log 2>&1
 	;;
 	*)
