@@ -1,24 +1,24 @@
 #!/usr/bin/python
-"""A library to use decode_dimms.pl to gather memory properties."""
+"""A library to use decode_dimms.pl to gather dimm properties."""
 
 import os
 import master
 import re
-import time
-import fcntl
-import errno
-import select
-#from master.util import *
 
 def getMemoryInfo():
-	"""Gather memory info and return a dictionary"""
+	"""getMemoryInfo() -> dictionary
+	This function relies on 'decode-dimms' to gather 
+	pertinent dimm information.  It also requires 
+	kernel modules 'eeprom' and 'i2c-i801'.
+	"""
 
 	memmap={}
 	bank = ''
-	found = ''
+	found = {}
 
 	if not os.access(master.config['decode-dimms'],os.X_OK):
 		master.debug("Error finding:"+master.config['decode-dimms'])
+
 		return {}
 
 	p = os.popen(master.config['decode-dimms'],"r")
@@ -28,20 +28,27 @@ def getMemoryInfo():
 			bank = l.split().pop()
 
 		found = foundMemInfo(l)
+		
 		if found:
 			memmap["dimm."+bank+"."+found.keys()[0]] =  found[found.keys()[0]]
+	p.close()	
 
+	if not memmap:
+		master.debug("Error: No dimm information found. * Requires 'eeprom' and 'i2c-i801' kernel modules *")
+	
 	return memmap
 	
 
 def foundMemInfo(line):	
-	"""Check line for important memory info.
+	"""foundMemInfo(line) -> (single dictionary entry)
+
 	Memory info is returned as a dictionary entry.  If no
-	info is found then an empty string is returned.
+	info is found then an empty dictionary is returned.
 	Possible matches include:
-	1. Manufacturer  ('mem.manufacturer')
-	2. Serial Number ('mem.serial')
-	3. Part Number   ('mem.part_number')
+	1. Manufacturer  ('dimm.x.manufacturer')
+	2. Serial Number ('dimm.x.serial')
+	3. Part Number   ('dimm.x.part_number')
+	** x = [dimm bank] **
 	"""
 
 	foundManufacturer = re.compile("Manufacturer")
@@ -57,7 +64,7 @@ def foundMemInfo(line):
 	if foundPartNo.match(line):
 		return{"part_number": line[11:].strip()}
 
-	return ''
+	return {}
 
 def _test():
 	d=getMemoryInfo()
