@@ -4,7 +4,7 @@
 #
 # chkconfig: 2345 69 79
 # description: Master Project
-# config: /etc/mcp.conf
+# config: /etc/mcp.conf /etc/mcp-priv.conf
 #
 
 #hack for now, remove when the library is in the right place:

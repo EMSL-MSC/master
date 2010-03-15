@@ -1,2 +1,3 @@
 include misc/mcp.conf
+include misc/mcp-priv.conf
 

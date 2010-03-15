@@ -79,7 +79,7 @@ setup(name='master', version='0.1',
 	packages=['master'],
 
 	scripts = thescripts,
-	data_files = [('/etc/',['misc/mcp.conf'])],
+	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf'])],
 	#requires=['python (>=2.4)','hostparser','postgresql-python'],
 	cmdclass = { 
 	    'install_scripts': local_install_scripts, 

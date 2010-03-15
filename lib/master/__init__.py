@@ -8,6 +8,7 @@ def basicdebug(msg):
 
 config = {
 	"config_file"       : "/etc/mcp.conf",
+    "privileged_conf"   : "/etc/mcp-priv.conf",
 	"server_url"        : "http://localhost:627",
 	"sark_modules"      : ("all",),
 	"database_server"   : "",
@@ -25,14 +26,22 @@ config = {
 }
 
 def load_config():
-	global config
+    load_config_file("config_file")
 
-	try:
+def load_privileged_config():
+    load_config_file("privileged_conf")
+
+def load_config_file(param):
+    """Loads the configuration file defined in config[param]"""
+
+    global config
+
+    try:
 		crap={}
-		exec open(config["config_file"]) in crap, config
+		exec open(config[param]) in crap, config
 		for (k,v) in config.items():
-			debug("Config: "+str(k)+" => "+str(v)) 
-	except IOError:
+			debug("Config: "+str(k)+" => "+str(v))
+    except IOError:
 		debug("Error Loading Config file: "+config["config_file"])
 
 

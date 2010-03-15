@@ -1,19 +1,20 @@
 #!/usr/bin/env python
+# vim: tabstop=4:noexpandtab:shiftwidth=4:
+
 """
 Below any parameter requiring a node, status, user, or property accepts a symbolic name such as 'eth0' or 'cu3cn34'
 """
 
 import os
 import sys
-import socket
-import getopt
 import time
 import master
 import mimetypes
+from optparse import OptionParser
 from xmlrpclib import Fault
 from twisted.enterprise import adbapi
-from twisted.internet import reactor, task
-from twisted.web import xmlrpc, server, http, resource, rewrite
+from twisted.internet import reactor
+from twisted.web import xmlrpc, server, http, resource
 from twisted.names import client
 
 debug = False
@@ -58,7 +59,7 @@ def Failure(code,message,srvdbg=""):
 	"""Return an xmlrpclib.Fault after calling the current master.debug function"""
 	master.debug("Failure %s:%s:%s"%tuple([str(x) for x in code,message,srvdbg]))
 	return Fault(code,message)
-		
+
 class Authorizer:
 	"A Mixin class to do authorization checks on resource requests"
 
@@ -74,7 +75,7 @@ class Authorizer:
 			request.write("<html><title>Unauthorized</title><body><h1>401: Unauthorized</h1></body></html>")
 			request.finish()
 			master.debug("Error in Authorization: "+str(msg))
-			
+
 		def checkCount(name):
 			"if there is an entry in the db, then we can talk to this host"
 			def callback(res):
@@ -543,15 +544,26 @@ def main():
 	global connPool
 	global debug
 
-	optlist,args = getopt.getopt(sys.argv[1:],'dc:')
-	for (arg,val) in optlist:
-		if arg == '-d':
-			debug=1
-		if arg == "-c":
-			master.config["config_file"]=val
-	
+	parser = OptionParser()
+	parser.add_option('-d', '--debug', action='store_true', dest='debug',
+						help="Turn on debug mode.", default=False)
+	parser.add_option('-c', '--config', help='Main configuration file.',
+						dest='config', default="")
+	parser.add_option('-p', '--privileged-config',
+						help='Database configuration file location.',
+						dest='privileged_conf',default="")
+	options, args_left = parser.parse_args()
+
+	if options.debug:
+		debug = 1
+	if options.config != "":
+		master.config['config_file'] = options.config
+	if options.privileged_conf != '':
+		master.config['privileged_conf'] = options.privileged_conf
+
 	master.load_config()
-	
+	master.load_privileged_config()
+
 	if not debug:
 		daemonize()
 	else:
@@ -560,15 +572,15 @@ def main():
 	#TODO make numConnections configurable
 	connPool = adbapi.ConnectionPool(
 		"pgdb",
-		user=master.config["database_user"], 
-		database=master.config["database_name"], 
+		user=master.config["database_user"],
+		database=master.config["database_name"],
 		password=master.config["database_password"],
 		host=master.config["database_server"],
 		cp_reconnect = True,
 		cp_min = int(master.config["database_min_connections"]),
 		cp_max = int(master.config["database_max_connections"])
 	)
-	
+
 	#create an xmlrpc directory structure resource and put it in the master xmlrpc directory
 	m = MasterXMLRPCBase()
 	m.putSubHandler('master', MasterXMLRPCServer())
