@@ -69,7 +69,7 @@ if "--chinook" in sys.argv:
 else:
 	paths = ['/usr/bin/',"/etc/init.d","/usr/sbin"]
 scr = [['client/master','client/sark',
-		'client/nadmin', 'client/mcehandler.py'],
+		'client/nadmin', 'client/mcehandler'],
 		["client/master-sark","server/master-mcp"], ["server/mcp"] ]
 thescripts = zip (paths,scr)
 
