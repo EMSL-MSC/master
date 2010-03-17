@@ -209,7 +209,46 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 			).addCallback(lambda res: dict(res)
 			).addErrback(lambda msg: Failure(20,"getStatus failed for %s"%(str(names)), msg))
 	xmlrpc_getStatus.signature = [["struct"],["struct", "array"]]
-	
+
+	def xmlrpc_addEvent(self, name, description=''):
+		"""addEvent(name, description = '') -> Boolean
+
+		Creates a new event, with name and description.
+		Returns True or xmlrpclib.Fault on error"""
+		return connPool.runOperation("""
+							   INSERT INTO
+								event (name, description)
+							   VALUES (%(name)s, %(description)s)""",
+								{'name': name, 'description': description}
+					).addCallback(lambda a: True
+					).addErrback(lambda msg: Failure(10,
+										"addEvent failed for %s:%s"% (name,
+										description), msg))
+	xmlrpc_addEvent.signature = [["bool", "string"],
+								["bool", "string", "string"]]
+
+	def xmlrpc_getEvent(self, names=False):
+		"""getEvent(names=False) -> {'name': 'Description',...}
+
+		Get a list of events.
+		names - a list of event names, if list is empty return all events
+		"""
+		query = """
+			SELECT
+				name, description
+				FROM event"""
+		if names:
+			query += " WHERE name IN %(names)s"
+		else:
+			names = []
+
+		return connPool.runQuery(query, {'names': tuple(names)}
+					).addCallback(lambda res: dict(res)
+					).addErrback(lambda msg: Failure(20,
+									"getEvent failed for %s"% (str(names)),
+									msg))
+	xmlrpc_getEvent.signature = [["struct"], ["struct", "array"]]
+
 	#@dbRW
 	def xmlrpc_addProperty(self, name,desc = ''):
 		"""addProperty(name,desc = '') -> Boolean
@@ -331,7 +370,105 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 					["struct", "array", "string"],
 					["struct", "array", "string", "int"],
 					["struct", "array", "string", "int", "int"]]
-	
+
+	def xmlrpc_storeNodeEvent(self, nodes, event, user,comment="",time="now"):
+		"""storeNodeEvent(nodes, event, user, comment, time) -> Boolean
+
+		Creates an event log entry for a list of nodes.
+		Comment and timestamp are optional.
+		Returns True on success, xmlrpclib.Fault on error.
+		"""
+		def storeEvent(txn, nodes, event, user, comment, time):
+			txn.execute("""
+				INSERT INTO
+	 			   node_event_log (node_id, event_id, time, comment, user_id)
+				   SELECT
+						node.id,
+						(SELECT id FROM event WHERE name = %(event)s),
+						%(time)s,
+						%(comment)s,
+						(SELECT id FROM users WHERE username = %(user)s)
+						FROM
+							node
+						WHERE
+							node.name IN %(nodes)s""",
+					{
+						"nodes": tuple(nodes),
+						"user": user,
+						"time": epochTo8601(time),
+						"comment": comment,
+						"event": event
+					})
+		return connPool.runInteraction(storeEvent, nodes, event,
+										user, comment, time
+			).addCallback(lambda a: True
+			).addErrback(lambda msg: Failure(10,
+									"storeNodeEvent failed for %s"% \
+										(str((nodes, event, user, comment,
+											time))), msg))
+	xmlrpc_storeNodeEvent.signature = [
+		["bool", "array", "string", "string"],
+		["bool", "array", "string", "string", "string"],
+		["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
+
+	def xmlrpc_getNodeEventHistory(self, nodes, filter=False,
+								startTime='-infinity', endTime='infinity'):
+		"""getNodeEventHistory(nodes, filter=False, startTime='-infinity', endTime='infinity') -> {'node1': [('eventName,timestamp,comment),...],'node2':...}
+
+		Retrieve an ordered list of node events in a given time period for a
+		list of nodes.
+
+		Nodes that are not in the system will be silently ignored.
+
+		filter - set of events that are to be returned.
+		*Time - Datem & Time for start and end of requested data.
+
+		Timestamp values are the strings 'now', '-infinity', 'infinity' or an
+		integer representing a POSIX timestamp.
+		"""
+
+		def format_history(res):
+			ret = {}
+			for i in res:
+				try:
+					ret[i[0]] += [i[1:]]
+				except KeyError:
+					ret[i[0]] = [i[1:]]
+			return ret
+		query = """SELECT
+					node.name, event.name, EXTRACT('epoch' FROM time),
+					users.username, comment
+					FROM
+						node_event_log
+						JOIN node ON node.id = node_event_log.node_id
+						JOIN event ON event.id = node_event_log.event_id
+						JOIN users ON users.id = node_event_log.user_id
+					WHERE
+						node.name IN %(nodes)s
+						AND
+						time BETWEEN %(start)s AND %(end)s"""
+		if filter:
+			query += " AND event.name IN %(event)s "
+		query += """ ORDER BY time"""
+
+		return connPool.runQuery(query,
+									{
+										"nodes": nodes,
+										"event": filter,
+										"start": epochTo8601(startTime),
+										"end": epochTo8601(endTime)
+									}
+			).addCallback(format_history
+			).addErrback(lambda msg: \
+				Failure(20, "getNodeEventHistory Failed for %s "% \
+				(str((nodes, filter, startTime,endTime))),msg))
+
+	xmlrpc_getNodeEventHistory.signature = [
+					["struct", "array"],
+					["struct", "array", "string"],
+					["struct", "array", "string", "int"],
+					["struct", "array", "string", "int", "int"]]
+
 	#FIXME return bool or timestamp?
 	#@dbRW
 	def xmlrpc_updateNodeProperty(self, node,property,propertyValue,comment="",time="now"):
@@ -497,9 +634,9 @@ class MasterXMLRPCServer(xmlrpc.XMLRPC):
 		return connPool.runQuery(sql, filt
 			).addCallback(lambda a: [i[0] for i in a]
 			).addErrback(lambda msg: Failure(20,"getNodeFilter failed for %s"%(str(filt)),msg))
-	
+
 	xmlrpc_getNodesFilter.signature = [ ["struct","array"] ]
-							
+
 	#@dbRO
 	def xmlrpc_serverTime(self):
 		"""serverTime -> float

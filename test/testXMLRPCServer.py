@@ -1,18 +1,19 @@
 #!/usr/bin/env python
+# vim: noet:ts=4:sw=4:
 
 import xmlrpclib
-import errno
-import exceptions
 import pgdb
 import time
 import datetime
 
-server_url = 'http://127.0.0.1:627';
-server = xmlrpclib.Server(server_url);
+server_url = 'http://127.0.0.1:627'
+server = xmlrpclib.Server(server_url)
 
 def wipeDatabase(user,database):
 	conn = pgdb.connect(user=user, database=database)
-	for tbl in ("node_properties_log","node_status_log","node","property","status","users"):
+    tables = ("node_properties_log", "node_status_log","node_event_log",
+              "node", "property","status","users","event",)
+	for tbl in tables:
 		curs = conn.cursor()
 		curs.execute("delete from "+tbl)
 		curs.close()
@@ -78,3 +79,15 @@ try_call(server.master.getNodePropertyHistory, [["n0", "n0"], False, tendaysago,
 try_call(server.master.getNodePropertyHistory, [["n0", "n1"], False, "now", tendaysfromnow],{})
 try_call(server.master.getNodePropertyHistory, [["n0", "n1"], ["n0"], "now", tendaysfromnow],{})
 try_call(server.master.getNodePropertyHistory, [["n0", "n0"], ["n0"]],{})
+
+try_call(server.master.addEvent, ["Stuff", "Does happen"], True)
+try_call(server.master.addEvent, ["Strange", "Things do happen"], True)
+try_call(server.master.getEvent, [], {'Stuff': 'Does happen',
+                                      'Strange': 'Things do happen'})
+try_call(server.master.getEvent, [['Stuff']],
+                                {'Stuff': 'Does happen'})
+try_call(server.master.storeNodeEvent,
+         [['n0'], 'Stuff', 'AbooDaba', 'Did happen'],
+         True)
+try_call(server.master.getNodeEventHistory,
+         [['n0']], {'n0': 0})

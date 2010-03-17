@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+import master
+from master import cluster_interface
+import xmlrpclib
+import pwd
+import os
+from optparse import OptionParser
+from hostparser import parsenodes
+
+def main():
+    parser = OptionParser()
+    parser.add_option('-w', '--node', help="Node name for event.",
+                      dest="node")
+    parser.add_option('-l', '--locator', help="DIMM locator.", dest="locator")
+    parser.add_option('-c', '--config', help='MASTER config file.',
+                      dest='config')
+    options, args_left = parser.parse_args()
+
+    if options.config:
+        master.config['config_file'] = options.config
+
+    master.load_config()
+    mcp = xmlrpclib.Server(master.config["server_url"])
+    try:
+        nodeList = parsenodes.expand(options.node, [])
+    except:
+        parser.error("invalid node name given: '%s'")
+    if len(nodeList) > 1:
+        parser.error("more than one node specified")
+
+    elog = mcp.master.getNodeEventHistory(nodeList,False)
+    cluster =  getattr(cluster_interface,
+                             master.config['cluster_commands'])(
+                                 master.config['cluster_command_args'])
+
+    mcp.master.storeNodeEvent(nodeList, 'MCE',
+                              get_current_user(), options.locator)
+    event_count = count_num_events_since_clear(elog)[nodeList[0]]
+    if event_count >= 100:
+        cluster.mark_nodes_for_maint(options.locator,
+                                                     nodeList)
+        mcp.master.storeNodeEvent(nodeList, 'MCE_MAINT',
+                                  get_current_user(), options.locator)
+
+
+
+def count_num_events_since_clear(event_history):
+    """count_num_events_since_clear(dict) -> dict
+
+    Takes the dict of logs and counts the number of entries up to
+    the last (time ordered) MCE_MAINT event.
+
+    Returns a dictionary of {hostname: count} values
+    """
+    ret = {}
+    for node, logs in event_history.iteritems():
+        logs.sort(cmp = lambda x, y: cmp(float(y[1]),float(x[1])))
+        count = 0
+        for log in logs:
+            if log[0] == 'MCE_MAINT':
+                break
+            count += 1
+        ret[node] = count
+
+    return ret
+
+
+def get_current_user():
+    return os.getenv('SUDO_USER', pwd.getpwuid(os.getuid())[0])
+
+
+if __name__ == "__main__":
+    main()
+

@@ -27,7 +27,7 @@ class ClusterCommands(object):
 		"""
 		raise NotImplementedError
 	
-	def mark_nodes_for_maint(self, nodelist=[]):
+	def mark_nodes_for_maint(self, comment, nodelist=[]):
 		"""mark_nodes_for_main(nodelist) -> Int
 
 		Sets the nodes into a pending maintenance mode in the
@@ -37,7 +37,7 @@ class ClusterCommands(object):
 		"""
 		raise NotImplementedError
 	
-	def mark_nodes_available(self, nodelist=[]):
+	def mark_nodes_available(self, comment, nodelist=[]):
 		"""mark_nodes_available(nodelist) -> None
 
 		Sets the nodes into an available status is the cluster's
@@ -48,10 +48,30 @@ class ClusterCommands(object):
 		raise NotImplementedError
 
 
+class DebugCommands(ClusterCommands):
+    def __init__(self, *args):
+        print "DebugCommands(%s)"% (args,)
+
+    def get_node_status(self, nodename):
+        print "get_node_status(%s)"% nodename
+
+    def get_nodes_status(self, nodelist):
+        print "get_nodes_status(%s)"% (nodelist,)
+
+    def check_nodes_in_use(self, nodelist=[]):
+        print "check_nodes_in_use(%s)"% (nodelist,)
+
+    def mark_nodes_for_maint(self, comment, nodelist=[]):
+        print "mark_nodes_for_maint(%s, %s)"% (comment, nodelist,)
+
+    def mark_nodes_available(self, comment, nodelist=[]):
+        print "mark_nodes_available(%s, %s)"% (comment, nodelist,)
+
+
 class SlurmCommands(ClusterCommands):
 	def __init__(self, scontrol_bin='/usr/bin/scontrol'):
 		if not os.access(scontrol_bin, os.X_OK):
-			raise ArgumentError("%s is not executable or does not exist."% scontrol_bin)
+			raise AssertionError("%s is not executable or does not exist."% scontrol_bin)
 		self.scontrol_bin = scontrol_bin
 		self.scontrol_cmd = self.scontrol_bin + ' -a show node "%s"'
 

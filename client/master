@@ -1,12 +1,13 @@
 #!/usr/bin/python
 """ master - general MASTER project control program
 """
+# vim: noet:ts=4:sw=4
 
 usage="""
 master - general MASTER project control program
 
 	Use: master [-c <config file>] [-m <xmlrpcurl>] [-d] <action options>
-	
+
 	Actions:
         [ -s <StatusName> [ -D <Status Description> ] ]
 		[ -S ]
@@ -19,13 +20,14 @@ master - general MASTER project control program
                        [ -t <status> [ -r <comment> ] ]
 					   [ -n <comment> ]
                        [ -o <property> -i <value> [ -r <comment> ] ]
-					
+                       [ -e <event> [ -r <comment> ] ]
+
 	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
 	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
 	-v                Verbose, prints out extra information where possible
 	-d                Debug Mode - Show debug messages
 
-	-w <NodeList>     Select Nodes for Action. default: local hostname 
+	-w <NodeList>     Select Nodes for Action. default: local hostname
 
 	-a                Add a given list of nodes to the master system
 	-s <StatusName>   Add a new Status type to the master system
@@ -34,7 +36,9 @@ master - general MASTER project control program
 
 	-l                Show a node status Log (10 entries)
 	-p                Show a node property Log (10 entries)
-	-f                Show the full set of properties availible when using -l,-p options
+	-E				  Show a node event Log (10 entries)
+	-f                Show the full set of properties or statuses availible when using -l,-p options
+	-F <n>			  Limit the output to n lines.
 
 	-L                Show the state of a list of Nodes
 	-P                Show the current properties of a list of Nodes
@@ -42,9 +46,10 @@ master - general MASTER project control program
 	-t <status>       Set the Current Status of a node.
 	-o <property>     Set a property on a host.
 	-i <value>        The Value of the set property
-	-r <Reason>       Add a Reason or Comment on the Status or Property Change
-	
+	-r <Reason>       Add a Reason or Comment on the Status, Property Change or Event
+
 	-n <comment>      Add a Note about a system
+    -e <event>        Add an event for a system
 """
 
 import master
@@ -52,7 +57,6 @@ import os
 import xmlrpclib
 import sys
 import getopt
-import master.gather
 import socket
 import pwd
 from time import strftime,localtime,strptime,mktime
@@ -81,9 +85,11 @@ def main():
 	types=[]
 	verbose=None
 	all=False
+	all_limit=False
 	nodeList=[socket.gethostname().split(".")[0]]
 	listProperty=False
 	listStatus=False
+	listEvents=False
 	addNodes=False
 	addStatus=False
 	showStatus=False
@@ -91,6 +97,7 @@ def main():
 	addUser=False
 	makeComment=False
 	showAllStatuses=False
+	eventStore=False
 	description=""
 	reason=""
 	propertyValue=""
@@ -102,7 +109,9 @@ def main():
 	start_date = None
 	end_date = None
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:m:vdhas:D:lpLPt:To:i:r:w:fu:n:S", ['start-date=', 'end-date='])
+	optlist,args = getopt.getopt(sys.argv[1:],
+							"c:m:vdhas:D:lpLPt:To:i:r:w:fF:u:n:S:e:E",
+                              ['start-date=', 'end-date='])
 
 	if args:
 		print "Extra Arguments Given:" + str(args)
@@ -133,15 +142,24 @@ def main():
 
 		if arg == "-w":
 			nodeList = parsenodes.expand(val,[])
-			
+
 		if arg == "-l":
 			listStatus = True
 			actioncount += 1
 		if arg == "-p":
 			listProperty = True
 			actioncount += 1
+		if arg == "-E":
+			listEvents = True
+			actioncount += 1
+
 		if arg == '-f':
 			all = True
+		if arg == "-F":
+			try:
+				all_limit = int(val)
+			except ValueError:
+				print >>sys.stderr, "ERROR: argument to -f must be an integer: %s"% val
 
 		if arg == '-L':
 			showStatus = True
@@ -149,7 +167,7 @@ def main():
 		if arg == '-P':
 			showProperty =True
 			actioncount += 1
-		
+
 		if arg == '-T':
 			timeOrdered = True
 
@@ -163,11 +181,15 @@ def main():
 			propertyValue = val
 		if arg == '-r':
 			comment = val
-			
+
 		if arg == '-n':
 			makeComment = val
 			actioncount += 1
-			
+
+		if arg == '-e':
+			eventStore = val
+			actioncount += 1
+
 		if arg == '-S':
 			showAllStatuses = True
 			actioncount += 1
@@ -179,7 +201,7 @@ def main():
 				print "start date format was not YYYY-MM-DD"
 				print usage
 				return
-		
+
 		if arg == '--end-date':
 			try:
 				end_date = strptime(val, '%Y-%m-%d')
@@ -191,19 +213,23 @@ def main():
 		if arg == "-h":
 			print usage
 			return
-	
+
 	if actioncount != 1:
 		print "You have specified an invalid number of actions.  You must specify exactly 1 action. You specfied:",actioncount
 		print usage
 		return
-		
-	if ( listProperty or listStatus or addNodes or showStatus or showProperty or makeComment or property) and not nodeList:
+
+	if ( listProperty or listStatus or addNodes or showStatus\
+         or showProperty or makeComment or property or eventStore\
+         or listEvents)\
+         and not nodeList:
+
 		print "You have not provided a node list for processing"
 		print usage
 		return
 
 		master.debug("nodeList="+str(nodeList))
-		
+
 	master.load_config()
 	if serverurl:
 		master.config["server_url"]=serverurl
@@ -230,23 +256,11 @@ def main():
 		master.debug("Result of getNodePropertyHistory: "+str(plog))
 		if plog:
 			if timeOrdered:
-				logs = []
-				if not all:
-					logs = [[name] + log for name,logs in plog.iteritems() for log in logs[-10:]]
-				else:
-					logs = [[name] + log for name,logs in plog.iteritems() for log in logs]
-				sorted_nodes = parsenodes.expand(','.join(plog.keys()),[])
-				logs.sort(cmp=lambda x,y: cmp((x[3],sorted_nodes.index(x[0])),(y[3],sorted_nodes.index(y[0]))))
-				for log in logs:
-					print log[0] + " ", dt(log[3]),":",log[1],"=",log[2],"   ",log[4]
+				print_time_ordered_logs(plog, all, all_limit,
+							log_type='property')
 			else:
-				for node,logs in plog.items():
-					if not all:
-						logs=logs[-10:]
-					print node+":"
-					for l in logs:
-						print " ",dt(l[2]),":",l[0],"=",l[1],"   ",l[3]
-			
+				print_logs(plog, all, all_limit, log_type='property')
+
 	elif listStatus:
 		slog = None
 		if start_date or end_date:
@@ -256,30 +270,38 @@ def main():
 		master.debug("result of getStatusHistory: "+str(slog))
 		if slog:
 			if timeOrdered:
-				logs = []
-				if not all:
-					logs = [[name] + log for name,logs in slog.iteritems() for log in logs[-10:]]
-				else:
-					logs = [[name] + log for name,logs in slog.iteritems() for log in logs]
-				sorted_nodes = parsenodes.expand(','.join(slog.keys()),[])
-				logs.sort(cmp=lambda x,y: cmp((x[2],sorted_nodes.index(x[0])),(y[2],sorted_nodes.index(y[0]))))
-				for log in logs:
-					print log[0] + " ", dt(log[2]), ":", log[1], "by", log[3],"   C:",log[4]
+				print_time_ordered_logs(slog, all, all_limit,
+							log_type='status')
 			else:
-				for node,logs in slog.items():
-					if not all:
-						logs=logs[-10:]
-					print node+":"
-					for l in logs:
-						print " ",dt(l[1]),":",l[0],"by",l[2],"   C:",l[3]
-	
+				print_logs(slog, all, all_limit, log_type='status')
+	elif listEvents:
+		elog = None
+		if start_date or end_date:
+			master.debug("Calling getNodeEventHistory(%s,False,%s,%s)"% (
+                  nodeList,
+                  start_date,
+                  end_date))
+			elog = mcp.master.getNodeEventHistory(nodeList,False,
+									start_date,end_date)
+		else:
+			master.debug("Calling getNodeEventHistory(%s)"% (
+                  nodeList))
+			elog = mcp.master.getNodeEventHistory(nodeList)
+		master.debug("Result of getNodeEventHistory:" + str(elog))
+		if elog:
+			if timeOrdered:
+				print_time_ordered_logs(elog, all, all_limit,
+							log_type='event')
+			else:
+				print_logs(elog, all, all_limit, log_type='event')
+
 	elif addNodes:
 		for node in nodeList:
 			try:
 				mcp.master.addNode(node)
 			except xmlrpclib.Fault, e:
 				print >>sys.stderr,"Adding Node Failed:", e
-		
+
 	elif addStatus:
 		try:
 			mcp.master.addStatus(addStatus,description)
@@ -311,7 +333,7 @@ def main():
 			mcp.master.updateStatus(nodeList,statusValue,pwd.getpwuid(os.getuid())[0],comment)
 		except xmlrpclib.Fault, e:
 			print >>sys.stderr, "Error Setting Status:", e
-			
+	
 	elif makeComment:
 		try:
 			statuses = mcp.master.getNodeStatus(nodeList)
@@ -320,7 +342,13 @@ def main():
 				mcp.master.updateStatus([node],statuses[node][0],pwd.getpwuid(os.getuid())[0],makeComment)
 		except xmlrpclib.Fault, e:
 			print >>sys.stderr, "Error Setting Status:", e
-	
+    elif eventStore:
+        try:
+            mcp.master.storeNodeEvent(nodeList, eventStore,
+                                        pwd.getpwuid(os.getuid())[0], comment)
+        except xmlrpclib.Fault, e:
+            print >>sys.stderr, "Error storing event:", e
+
 	elif showAllStatuses:
 		try:
 			stati=mcp.master.getStatus()
@@ -328,7 +356,7 @@ def main():
 				print k,":",v
 		except xmlrpclib.Fault, e:
 			print >>sys.stderr, "Error Listing Statuses:", e
-			
+
 	elif property:
 		for node in nodeList:
 			master.debug("setting <"+node+"> property <"+property+"> to <"+propertyValue+">")
@@ -337,10 +365,48 @@ def main():
 				master.debug("updateNodeProperty: res = "+`res`)
 			except xmlrpclib.Fault, e:
 				print >>sys.stderr, "Error Setting Property:", e
-			
+
 	else:
 		print "unhandled options:",sys.argv
-		
+
+
+def print_time_ordered_logs(logs, all, all_limit, log_type):
+	ret = []
+	if not all:
+		ret = [[name] + log for name,ret in logs.iteritems()
+					for log in ret[-10:]]
+	elif all and all_limit:
+		ret = [[name] + log for name, ret in logs.iteritems()
+				for log in ret[-all_limit:]]
+	else:
+		ret= [[name] + log for name,ret in logs.iteritems() for log in ret]
+	sorted_nodes = parsenodes.expand(','.join(logs.keys()),[])
+	ret.sort(cmp=lambda x,y: cmp((x[2],sorted_nodes.index(x[0])),
+									(y[2],sorted_nodes.index(y[0]))))
+	for log in ret:
+		if log_type == 'property':
+			print "%s %s: %s by %s   C: %s"% (log[0], dt(log[2]), log[1],
+												log[3],log[4])
+		else:
+			print "%s %s: %s=%s   %s"% (log[0],
+								dt(log[3]),log[1],log[2],log[4])
+
+def print_logs(input_logs, all, all_limit, log_type):
+	for node,logs in input_logs.iteritems():
+		if not all:
+			logs=logs[-10:]
+		elif all_limit:
+			logs = logs[-all_limit:]
+		print node+":"
+		for l in logs:
+			master.debug(str(l))
+			if log_type == "property":
+				print "  %s: %s = %s     %s"% (dt(l[2]),l[0],l[1],l[3])
+			else:
+				print "  %s: %s by %s   C: %s"% (dt(l[1]),
+												l[0], l[2], l[3])
+
+
 if __name__ == "__main__":
 	try:
 		main()
