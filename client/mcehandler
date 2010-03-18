@@ -38,7 +38,7 @@ def main():
                               get_current_user(), options.locator)
     try:
         event_count = count_num_events_since_clear(elog)[nodeList[0]]
-    except IndexError:
+    except KeyError:
         event_count = 0
     if event_count >= 100:
         cluster.mark_nodes_for_maint(options.locator,
