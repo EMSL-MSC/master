@@ -36,7 +36,10 @@ def main():
 
     mcp.master.storeNodeEvent(nodeList, 'MCE',
                               get_current_user(), options.locator)
-    event_count = count_num_events_since_clear(elog)[nodeList[0]]
+    try:
+        event_count = count_num_events_since_clear(elog)[nodeList[0]]
+    except IndexError:
+        event_count = 0
     if event_count >= 100:
         cluster.mark_nodes_for_maint(options.locator,
                                                      nodeList)
