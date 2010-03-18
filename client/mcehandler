@@ -41,7 +41,7 @@ def main():
     except KeyError:
         event_count = 0
     if event_count >= 100:
-        cluster.mark_nodes_for_maint(options.locator,
+        cluster.mark_nodes_for_maint("More than 100 Machine Check Events.",
                                                      nodeList)
         mcp.master.storeNodeEvent(nodeList, 'MCE_MAINT',
                                   get_current_user(), options.locator)
