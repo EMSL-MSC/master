@@ -1,4 +1,5 @@
 #!/usr/bin/python
+#vim: noet:ts=4:sw=4
 
 import os
 import sys
@@ -109,7 +110,7 @@ class SlurmCommands(ClusterCommands):
 				self.scontrol_bin,
 				' '.join(nodelist))
 		if comment != '':
-			cmd += 'Reason="%s"'% (comment,)
+			cmd += ' Reason="%s"'% (comment,)
 		return os.system(cmd)
 	
 	def parse_slurm_output(self, fhandle):
