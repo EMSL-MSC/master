@@ -385,11 +385,11 @@ def print_time_ordered_logs(logs, all, all_limit, log_type):
 									(y[2],sorted_nodes.index(y[0]))))
 	for log in ret:
 		if log_type == 'property':
-			print "%s %s: %s by %s   C: %s"% (log[0], dt(log[2]), log[1],
-												log[3],log[4])
-		else:
 			print "%s %s: %s=%s   %s"% (log[0],
 								dt(log[3]),log[1],log[2],log[4])
+		else:
+			print "%s %s: %s by %s   C: %s"% (log[0], dt(log[2]), log[1],
+												log[3],log[4])
 
 def print_logs(input_logs, all, all_limit, log_type):
 	for node,logs in input_logs.iteritems():
