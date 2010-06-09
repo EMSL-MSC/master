@@ -6,6 +6,7 @@ from master import cluster_interface
 import xmlrpclib
 import pwd
 import os
+import time
 from optparse import OptionParser
 from hostparser import parsenodes
 
@@ -16,11 +17,13 @@ def main():
     parser.add_option('-l', '--locator', help="DIMM locator.", dest="locator")
     parser.add_option('-c', '--config', help='MASTER config file.',
                       dest='config')
+    parser.add_option('-p', '--period',
+                      help="Time period (hours) over which to count errors.",
+                      dest="window", action="store_int", default=24)
     options, args_left = parser.parse_args()
 
     if options.config:
         master.config['config_file'] = options.config
-
     master.load_config()
     mcp = xmlrpclib.Server(master.config["server_url"])
     try:
@@ -30,10 +33,12 @@ def main():
     if len(nodeList) > 1:
         parser.error("more than one node specified")
 
+    event_window = parser.window*60*60
+    event_start = time.localtime() - event_window
     elog = mcp.master.getNodeEventHistory(nodeList,False)
-    cluster =  getattr(cluster_interface,
-                             master.config['cluster_commands'])(
-                                 master.config['cluster_command_args'])
+    cluster = getattr(cluster_interface,
+                      master.config['cluster_commands'])(
+                          master.config['cluster_command_args'])
 
     operational_statuses = ['ok','allocated']
 	try:
@@ -47,34 +52,39 @@ def main():
                                   get_current_user(), options.locator)
 
         try:
-            event_count = count_num_events_since_clear(elog)[nodeList[0]]
+            event_count = count_events(elog, event_start)[nodeList[0]]
         except KeyError:
             event_count = 0
         if event_count >= 100:
-            cluster.mark_nodes_for_maint("PNNLCHECK: More than 100 Machine Check Events.",
-                                                         nodeList)
+            cluster.mark_nodes_for_maint(
+                "PNNLCHECK: More than 100 Machine Check Events.",
+                nodeList)
             mcp.master.storeNodeEvent(nodeList, 'MCE_MAINT',
                                       get_current_user(), options.locator)
 
-
-
-def count_num_events_since_clear(event_history):
-    """count_num_events_since_clear(dict) -> dict
+def count_events(event_history, event_start):
+    """count_events(dict) -> dict
 
     Takes the dict of logs and counts the number of entries up to
-    the last (time ordered) MCE_MAINT event.
+    the last (time ordered) MCE_MAINT event. Groups counts by
+    DIMM and returns the highest count.
 
     Returns a dictionary of {hostname: count} values
     """
     ret = {}
     for node, logs in event_history.iteritems():
         logs.sort(cmp = lambda x, y: cmp(float(y[1]),float(x[1])))
-        count = 0
+        dimm_counts = {}
+        max_count = 0
         for log in logs:
             if log[0] == 'MCE_MAINT':
                 break
-            count += 1
-        ret[node] = count
+            if log[1] < event_start:
+                break
+            dimm_counts[log[2]] = dimm_counts.get(log[2], 0) + 1
+            if dimm_counts[log[2]] > max_count:
+                max_count = dimm_counts[log[2]]
+        ret[node] = max_count
 
     return ret
 
