@@ -52,7 +52,7 @@ master - general MASTER project control program
     -e <event>        Add an event for a system
 """
 
-import master
+#import master
 import os
 import xmlrpclib
 import sys
