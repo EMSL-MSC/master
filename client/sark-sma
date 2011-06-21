@@ -1,0 +1,146 @@
+#!/usr/bin/python
+""" Sark-SMA - the properties Gatherer for HP SMA's
+"""
+
+usage="""
+sark-sma - MASTER SMA property gathering
+
+	Use: sark-sma [-c <config file>] [-m <xmlrpcurl>] [ -s <server> ] [ -a <sma>,<sma>,...] [-v] [-d]
+
+	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
+	-s <server>       Specify Server to connect to to run sssu on.
+	-a <sma>,<sma>,.. Specify list of SMA's to connect to for hsv information
+	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
+	-v                Verbose, prints out each property as it is uploaded to the mcp
+	-d                Debug Mode - Only gather properties and output them, Show debug messages
+"""
+
+import master
+import os
+import xmlrpclib
+import sys
+import getopt
+import master.gather
+import master.sma
+import socket
+
+# Procedure:
+#  Parse command line
+#  Load Config
+#  Run Configured Gather Steps
+#
+#  Connect to mcp
+#  download mcp properties for short hostname
+#  update any changes
+#    if property name does not exist add it to the database
+#  
+#
+#  Exit
+def main():
+	
+	#defaults
+	smas=[]
+	server=None
+	verbose=None
+	serverurl=""
+
+	optlist,args = getopt.getopt(sys.argv[1:],"c:s:a:m:vdh")
+
+	if args:
+		print "Extra Arguments Given:" +args
+		return
+
+	for (arg,val) in optlist:
+		if arg == "-c":
+			master.config["config_file"]=val
+		if arg == "-a":
+			smas += val.split(",")
+		if arg == "-s":
+			server = val;
+		if arg == "-m":
+			serverurl=val
+		if arg == "-v":
+			verbose = True
+		if arg == "-d":
+			master.debug = master.basicdebug
+		if arg == "-h":
+			print usage
+			return
+	
+	master.load_config()
+	
+	if serverurl:
+		master.config["server_url"]=serverurl
+	
+	if smas:
+		master.config["sma_list"]=smas
+
+	if server:
+		master.config["sma_server"]=server
+		
+	props={}
+	
+	mcp = xmlrpclib.Server(master.config["server_url"])
+	myname = socket.gethostname().split(".")[0]
+
+	hsvs = master.sma.get_hsv_info(master.config["sma_server"],master.config["sma_list"])
+
+	for hsv in hsvs:
+		props = hsvs[hsv]
+		if verbose: print "Processing:",hsv
+
+		#check to see if node exists:
+		nodes = mcp.master.getNodes([hsv])
+		if len(nodes) == 0:
+			print "hsv node:",hsv,"does not exist in database"
+			continue
+
+
+		sprops = mcp.master.getNodeProperties([hsv])
+		if sprops.has_key(hsv):
+			current = sprops[hsv]
+		else:
+			if verbose: print "hsv node:",hsv,"no  properties found"
+			current = []
+
+		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
+		for k,v,ts,cmt in current:
+			if props.has_key(k) and props[k] == v:
+				master.debug("deleting key <"+k+"> because it is already on the server")
+				del(props[k])
+
+		# Everything that is left needs to updated on the server
+		for k,v in props.items():
+			try:
+				if verbose: print "Adding",k," => ",v
+				
+				res = mcp.master.updateNodeProperty(hsv,k,v)
+				master.debug("updateNodeProperty: res = "+`res`)
+			except xmlrpclib.Fault,msg:
+				master.debug("Adding key <"+k+"> to db because:"+str(msg))
+				
+				try:
+					res = mcp.master.addProperty(k,"Added by Sark on "+myname)
+					master.debug("addProperty: res="+`res`)
+				except xmlrpclib.Fault:
+					print >>sys.stderr, "Error adding New property"
+					continue  # just move on
+				
+				try:
+					res = mcp.master.updateNodeProperty(hsv,k,v)
+					pass
+				except xmlrpclib.Fault,msg:
+					print >>sys.stderr,"Error adding "+k+" => "+v+": "+str(msg)
+
+			except Exception,msg: #Will this ever happen
+				master.debug("Error updating property:"+k+":"+str(msg))
+				
+
+
+if __name__ == "__main__":
+	try:
+		main()
+	except KeyboardInterrupt:
+		pass
+
+

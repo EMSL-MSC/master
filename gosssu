@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+
+
+import pty
+import os
+import signal
+import fcntl
+from time import sleep
+
+running=True
+def sigchild(sig,frame):
+	global running
+	print "signal",sig
+	running=False
+
+def doread(i):
+	count=5;
+	while count:
+		try:
+			data = i.read()
+			data.rstrip()
+			print data
+			if len(data) == 0:
+				break	
+		except IOError,msg:
+			if msg.errno==11:
+				sleep(1)
+				count -=1
+			else:
+				print msg
+				break
+
+pid,fd = pty.fork()
+print pid,fd
+
+if not pid:
+	print "child"
+	#os.execl("/usr/bin/ssh","-t","io1","sssu")
+	os.execl("/usr/bin/ssh","-t","io1")
+	print "execfail"
+else:
+	print "parent"
+
+	signal.signal(signal.SIGCLD,sigchild)
+
+	i = os.fdopen(fd,'r')
+	o = os.fdopen(fd,'w')
+
+	print i
+#	print o
+
+	fcntl.fcntl(i,fcntl.F_SETFL,os.O_NONBLOCK)
+
+	#o.write("set options command_delay=0 display_width=500\n");
+	#o.write("sma2\nadministrator\nhpinvent\nls ?\n")
+	o.write("sssu\n")
+	doread(i)
+	o.write("sma2\nadministrator\nhpinvent\nls ?\n")
+	doread(i)
