@@ -8,6 +8,7 @@ FIXMES:
 """
 
 import os
+import re
 import time
 from master import debug,dell,amcc,hp,mem
 from master.util import *
@@ -186,7 +187,7 @@ def getDMIInfo():
 	current_category = ''
 	for line in lines:
 		if line.startswith('Handle'):
-			current_category = line.strip().split()[1]
+			current_category = re.search("([x0-9A-F]+)", line).group()
 			if not category_map.has_key(current_category):
 				current_category = ''
 				continue
