@@ -1,0 +1,24 @@
+## -*- coding: utf-8 -*-
+
+<%def name="datePicker(id=None, selector=u'#datepicker')">
+    <script type="text/javascript">
+        $(function() {
+                $.datepicker.setDefaults({
+                    dateFormat: 'yy-mm-dd',
+                });
+                %if id:
+                $("#${id}").datepicker();
+                %else:
+                $("${selector}").datepicker();
+                %endif
+        });
+    </script>
+</%def>
+
+<%def name="accordion()">
+<script type="text/javascript">
+    $(function() {
+            $('#accordion').accordion({collapsible: true, active: false});
+    });
+</script>
+</%def>

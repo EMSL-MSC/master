@@ -1,0 +1,14 @@
+<%inherit file="/base/index.html" />
+<%namespace name="graph" file="/component/graph.html" />
+
+<%def name="title()">${c.event_name}</%def>
+<%def name="heading()"><h1>${c.event_name}</h1></%def>
+
+<%def name="body()">
+<div id="Description">Events per hour for ${c.event_name}: ${c.event_description}</div>
+<div id="EventsGraph">
+    <div id="placeholder" style="width:600px;height:300px;"></div>
+    ${graph.setup_timeseries()}
+    ${graph.generate_timeseries()}
+</div>
+</%def>

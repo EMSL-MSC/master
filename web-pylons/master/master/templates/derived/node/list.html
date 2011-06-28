@@ -1,0 +1,46 @@
+<%inherit file="/base/index.html" />
+
+<%def name="heading()"><h1>Node List</h1></%def>
+
+<%def name="buildrow(node, odd=True)">
+    %if odd:
+        <tr class="odd">
+    %else:
+        <tr class="even">
+    %endif
+        <td>
+            ${h.link_to(
+                node.name,
+                h.url(
+                    controller=u'node',
+                    action=u'name',
+                    id=unicode(node.name)
+                )
+            )}
+        </td>
+    </tr>
+</%def>
+
+<div id="NodeSearch">
+    ${h.form(h.url(controller=u'node', action=u'search'), method='post')}
+    Search Nodes: ${h.text('q')}
+                  ${h.submit('submit', 'submit')}
+    ${h.end_form()}
+</div>
+
+% if len(c.paginator):
+<p>${ c.paginator.pager('$link_first $link_previous $first_item to $last_item of $item_count $link_next $link_last') }</p>
+<table class="paginator"><tr><th>Node Name</th></tr>
+    <% counter=0 %>
+    % for item in c.paginator:
+        ${ self.buildrow(item, counter%2) }
+        <% counter += 1 %>
+    %endfor
+</table>
+<p>${ c.paginator.pager('~2~') }</p>
+% else:
+<p>
+    No nodes defined.
+    <a href="${h.url(controller='node', action='new')}">Add one</a>.
+</p>
+% endif

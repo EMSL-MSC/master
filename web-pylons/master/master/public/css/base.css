@@ -1,0 +1,96 @@
+paginator {
+    float: left;
+}
+#GraphContainer { 
+    margin-left: 50px;
+    float: left;
+    clear: right;
+}
+#placeholder {
+    margin-bottom: 20px;
+}
+table.History {
+    font-size: 0.7em;
+}
+.addData {
+    position: relative;
+    margin-left: 21px;
+}
+.ui-accordion {
+    font-size: 0.9em;
+}
+.legendLabel {
+    border: none;
+}
+.legendColorBox {
+    border: none;
+}
+table {
+    border-width: 1px;
+    border-spacing: ;
+    border-style: solid;
+    border-color: black;
+    border-collapse: collapse;
+    width: 100%;
+}
+table th {
+    border-width: 1px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 2;
+    border-style: solid;
+    border-color: black;
+}
+table td {
+    border-width: 1px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 2px;
+    border-style: solid;
+    border-color: black;
+}
+tr.even {
+    background-color: #DDDDDD;
+}
+tr.odd {
+    background-color: #CCCCCC;
+}
+thead tr {
+    font-weight: 800;
+    background-color: #EEEEEE;
+}
+
+input.datepicker {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+span.datepicker {
+    width: 11;
+}
+p.top {
+    float: left;
+    clear: left;
+}
+
+.Dashboard {
+  width: 500px;
+  border: 1px solid black;
+}
+
+.Dashboard .Title {
+  font-weight: 800;
+  background-color: #CCCCCC;
+  padding-left: 10px;
+  padding-right: 10px;
+  text-align: center;
+  width: 480px;
+  border: 1px solid black;
+}
+
+.Results .Name {
+  border: 1px solid black;
+}
+.Results .Count {
+  border 1px solid black;
+  text-align: center;
+}
