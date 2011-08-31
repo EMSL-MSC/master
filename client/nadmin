@@ -1,19 +1,19 @@
-#!/mscf/apps/python/2.5.1/bin/python
+#!/mscf/apps/python/2.6.4/bin/python
 
 usage="""
 nadmin - Node administration utility.
 
-	Use: nadmin [--config <config file>] [-m <xmlrpcurl>] [-d] <action options>
+    Use: nadmin [--config <config file>] [-m <xmlrpcurl>] [-d] <action options>
 
-	Actions:
-		-i	Return Nodes to Use.
-		-o	Remove Nodes From Use.
-		-c	Check for nodes to be worked on.
-	
-	-w <NodeList>		A list of nodes to perform the action on.
-	-r <comment>		A comment for the action.
-	-l	--history	Display output in long format showing history.
-	-h 			Display this message.
+    Actions:
+        -i    Return Nodes to Use.
+        -o    Remove Nodes From Use.
+        -c    Check for nodes to be worked on.
+    
+    -w <NodeList>        A list of nodes to perform the action on.
+    -r <comment>        A comment for the action.
+    -l    --history    Display output in long format showing history.
+    -h             Display this message.
 """
 
 import master
@@ -29,175 +29,194 @@ from hostparser import parsenodes
 DEBUG=False
 
 def main():
-	global DEBUG
-	try:
-		(options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
-	except getopt.GetoptError:
-		print usage
-		sys.exit(1)
-	args = dict(options)
+    global DEBUG
+    try:
+        (options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
+    except getopt.GetoptError:
+        print usage
+        sys.exit(1)
+    args = dict(options)
 
-	if '-h' in args:
-		print usage
-		sys.exit(0)
-	
-	if '-d' in args:
-		DEBUG = True
-	
-	if '-l' in args or '--history' in args:
-		HISTORY=True
-	else:
-		HISTORY=False
+    if '-h' in args:
+        print usage
+        sys.exit(0)
 
-	try:
-		mcp = setup_mcp(args)
-	except:
-		print "Error connecting to the mcp."
-		sys.exit(2)
-	
-	clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(master.config['cluster_command_args'])
+    if '-d' in args:
+        DEBUG = True
 
-	if '-r' in args:
-		comment = args['-r']
-	else:
-		comment = ''
-	if '-c' in args:
-		# Check
-		try:
-			maintnodes = get_maint_nodes(mcp)
-			maintnodes = check_available_for_work(maintnodes, clusterCommands)
-			if len(maintnodes) > 0:
-				print_maint_nodes(mcp, maintnodes, HISTORY)
-			else:
-				print "No nodes available for maintenance."
-		except:
-			if DEBUG:
-				raise
-			print "Error: while finding nodes for maintenance."
-	# Out
-	elif '-o' in args:
-		if '-w' not in args:
-			print "Error: Missing NodeList"
-			print usage
-			sys.exit(1)
+    if '-l' in args or '--history' in args:
+        HISTORY=True
+    else:
+        HISTORY=False
 
-		if comment == '':
-			print "Error: Missing Reason."
-			print usage
-			sys.exit(1)
+    try:
+        mcp = setup_mcp(args)
+    except:
+        print "Error connecting to the mcp."
+        sys.exit(2)
 
-		try:
-			outnodes = parse_nodelist(args['-w'])
-		except:
-			print "Error parsing nodelist."
-			sys.exit(2)
+    clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(master.config['cluster_command_args'])
 
-		if len(outnodes) > 0:
-			mark_nodes_for_maintenance(mcp, outnodes, comment, clusterCommands)
-		else:
-			print "Missing node list."
-			sys.exit(1)
-	# In
-	elif '-i' in args:
-		if '-w' not in args:
-			print "Error: Missing NodeList"
-			print usage
-			sys.exit(1)
-	
-		try:
-			innodes = parse_nodelist(args['-w'])
-		except:
-			print "Error parsing nodelist."
-			sys.exit(2)
+    if '-r' in args:
+        comment = args['-r']
+    else:
+        comment = ''
+    if '-c' in args:
+        # Check
+        try:
+            maintnodes = get_maint_nodes(mcp)
+            maintnodes = check_available_for_work(maintnodes, clusterCommands)
+            if len(maintnodes) > 0:
+                print_maint_nodes(mcp, maintnodes, HISTORY)
+            else:
+                print "No nodes available for maintenance."
+        except:
+            if DEBUG:
+                raise
+            print "Error: while finding nodes for maintenance."
+    # Out
+    elif '-o' in args:
+        if '-w' not in args:
+            print "Error: Missing NodeList"
+            print usage
+            sys.exit(1)
 
-		if len(innodes) > 0:
-			make_nodes_available(mcp, innodes, comment, clusterCommands)
-		else:
-			print "Missing node list."
-			sys.exit(1)
-	else:
-		print "Error: No action specified."
-		sys.exit(1)
+        if comment == '':
+            print "Error: Missing Reason."
+            print usage
+            sys.exit(1)
+
+        try:
+            outnodes = parse_nodelist(args['-w'])
+        except:
+            print "Error parsing nodelist."
+            sys.exit(2)
+
+        if len(outnodes) > 0:
+            mark_nodes_for_maintenance(mcp, outnodes, comment, clusterCommands)
+        else:
+            print "Missing node list."
+            sys.exit(1)
+    # In
+    elif '-i' in args:
+        if '-w' not in args:
+            print "Error: Missing NodeList"
+            print usage
+            sys.exit(1)
+    
+        try:
+            innodes = parse_nodelist(args['-w'])
+        except:
+            print "Error parsing nodelist."
+            sys.exit(2)
+
+        if len(innodes) > 0:
+            make_nodes_available(mcp, innodes, comment, clusterCommands)
+        else:
+            print "Missing node list."
+            sys.exit(1)
+    else:
+        print "Error: No action specified."
+        sys.exit(1)
 
 
 
 def setup_mcp(args):
-	if '--config' in args:
-		master.config['config_file'] = args['--config']
-	if '-m' in args:
-		master.config['server_url'] = args['-m']
-	if DEBUG:
-		master.debug = master.basicdebug
-	master.load_config()
-	return xmlrpclib.Server(master.config['server_url'])
+    if '--config' in args:
+        master.config['config_file'] = args['--config']
+    if '-m' in args:
+        master.config['server_url'] = args['-m']
+    if DEBUG:
+        master.debug = master.basicdebug
+    master.load_config()
+    return xmlrpclib.Server(master.config['server_url'])
 
 def get_maint_nodes(mcp):
-	return mcp.master.getNodesFilter({'status':'maint'}) + mcp.master.getNodesFilter({'status': 'dead'})
+    return mcp.master.getNodesFilter({'status':'maint'}) + mcp.master.getNodesFilter({'status': 'dead'})
 
 def check_available_for_work(nodelist, clusterCommands):
-	nodestate = clusterCommands.check_nodes_in_use(nodelist)
-	return [node for (node, val) in nodestate.iteritems() if not val]
+	# Horrible no good ugly hack
+    nlist = []
+    for node in nodelist:
+        if node.startswith('cu') and node[3] == 'n':
+            node = "%s0%s"% (node[0:2], node[2:])
+        nlist.append(node)
+    nodestate = clusterCommands.check_nodes_in_use(nlist)
+    hsvnodes = [node for node in nodelist if node.startswith('hsv')]
+    return [node for (node, val) in nodestate.iteritems() if not val] + hsvnodes
 
 def print_maint_nodes(mcp, nodelist, history=False):
-	nodelist = parsenodes.expand(','.join(nodelist),[])
-	node_status_history = mcp.master.getStatusHistory(nodelist)
-	node_statuses = {}
-	for (node, status_list) in node_status_history.iteritems():
-		first_index = 0
-		status_list = [item for item in status_list if item[3] != '' or (item[3] == '' and item[0] == 'ok')]
-		status_list.sort(cmp=lambda x,y: cmp(y[1],x[1]))
-		for item in status_list:
-			if item[0] == 'ok':
-				first_index = status_list.index(item) + 1
-				break
+    nodelist = parsenodes.expand(','.join(nodelist),[])
+    node_status_history = mcp.master.getStatusHistory(nodelist)
+    node_statuses = {}
+    for (node, status_list) in node_status_history.iteritems():
+        first_index = 0
+        status_list = [item for item in status_list if item[3] != '' or (item[3] == '' and item[0] == 'ok')]
+        status_list.sort(cmp=lambda x,y: cmp(y[1],x[1]))
+        for item in status_list:
+            if item[0] == 'ok':
+                first_index = status_list.index(item) + 1
+                break
+	if first_index != 0:
 		node_statuses[node] = status_list[:first_index-1]
-	for node in nodelist:
-		details = node_statuses[node]
-		if history:
-			status_str = "NodeName=%-12s:"% node
-			for item in details:
-				status_str += "\n\tStatus=%-7s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
-		else:
-			try:
-				status_str = "NodeName=%-12s Status=%-7s Reason=%s"% (node, details[0][0], details[0][3])
-			except IndexError, e:
-				status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."'% (node,)
+	else:
+		node_statuses[node] = status_list
+    for node in nodelist:
+        details = node_statuses[node]
+        if history:
+            status_str = "NodeName=%-12s:"% node
+            for item in details:
+                status_str += "\n\tStatus=%-7s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
+        else:
+            try:
+                status_str = "NodeName=%-12s Status=%-7s Reason=%s"% (node, details[0][0], details[0][3])
+            except IndexError, e:
+                status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."'% (node,)
 
-		print status_str
+        print status_str
 
 def parse_nodelist(nodestr):
-	return parsenodes.expand(nodestr,rettype=[])
+    return parsenodes.expand(nodestr,rettype=[])
 
 def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
-	result = clusterCommands.mark_nodes_for_maint(comment, nodelist)
-	if result != 0:
-		print "Error Setting Maintenance Mode."
-		sys.exit(2)
-	try:
-		set_status(mcp, 'maint', nodelist, comment)
-	except xmlrpclib.ProtocolError, e:
-		if DEBUG:
-			print "Error setting master status"
+    result = clusterCommands.mark_nodes_for_maint(comment, nodelist)
+    if result != 0:
+        print "Error Setting Maintenance Mode."
+        sys.exit(2)
+    try:
+        set_status(mcp, 'maint', nodelist, comment)
+    except xmlrpclib.ProtocolError, e:
+        if DEBUG:
+            print "Error setting master status"
 
 def make_nodes_available(mcp, nodelist, comment, clusterCommands):
-	result = clusterCommands.mark_nodes_available(nodelist, comment)
-	if result != 0:
-		print "Error Marking Nodes Available."
-		sys.exit(2)
-	try:
-		set_status(mcp, 'ok', nodelist, comment)
-	except xmlrpclib.ProtocolError, e:
-		if DEBUG:
-			print "Error setting master status."
+    result = clusterCommands.mark_nodes_available(nodelist, comment)
+    if result != 0:
+        print "Error Marking Nodes Available."
+        sys.exit(2)
+    try:
+        set_status(mcp, 'ok', nodelist, comment)
+    except xmlrpclib.ProtocolError, e:
+        if DEBUG:
+            print "Error setting master status."
 
 
 def set_status(mcp, status, nodelist, comment):
-	mcp.master.updateStatus(nodelist, status, get_current_user(), comment)
+    import pwd
+    user = pwd.getpwnam(get_current_user())
+    users = mcp.master.getUsers()
+    if user.pw_name not in users.keys():
+        try:
+            full_name = user.pw_gecos.split(',')[0]
+        except IndexError:
+            full_name = user.pw_name
+        mcp.master.addUser(user.pw_name, full_name)
+    mcp.master.updateStatus(nodelist, status, user.pw_name, comment)
 
 def get_current_user():
-	import pwd
-	import os
-	return os.getenv('SUDO_USER', pwd.getpwuid(os.getuid())[0])
+    import pwd
+    import os
+    return os.getenv('SUDO_USER', pwd.getpwuid(os.getuid())[0])
 
 if __name__ == "__main__":
-	main()
+    main()
