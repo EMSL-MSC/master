@@ -20,3 +20,7 @@ sudo python setup.py install_lib
 sudo python setup.py install_scripts --chinook -d /  
 sudo python setup.py install_data
 
+
+To build master RPMs:
+python setup.py bdist_rpm --release="8"
+
