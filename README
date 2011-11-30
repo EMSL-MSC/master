@@ -23,4 +23,6 @@ sudo python setup.py install_data
 
 To build master RPMs:
 python setup.py bdist_rpm --release="8"
+   or to build an rpm for chinook:
+python setup.py bdist_rpm --release="8" --chinook
 

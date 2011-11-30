@@ -65,14 +65,21 @@ class local_bdist_rpm(bdist_rpm):
 import sys
 if "--chinook" in sys.argv:
 	sys.argv.remove("--chinook")
-	paths = ['/mscf/mscf/bin/',"/etc/init.d","/mscf/mscf/sbin/"]
+	binDir = '/mscf/mscf/bin'
+	sbinDir = '/mscf/mscf/sbin'
 else:
-	paths = ['/usr/bin/',"/etc/init.d","/usr/sbin"]
+	binDir = '/usr/bin'
+	sbinDir = '/usr/sbin'
+
+paths = [ '%s/' % binDir, "/etc/init.d", "%s/" % sbinDir ]
 scr = [['client/master','client/sark',
 		'client/nadmin', 'client/mcehandler'],
 		["client/master-sark","server/master-mcp"], ["server/mcp"] ]
 thescripts = zip (paths,scr)
 
+mcp_bin_dirs = open('misc/mcp-bin-dirs.sh', 'w')
+mcp_bin_dirs.write('#!/bin/sh\nexport MASTER_BIN_DIR=%s\nexport MASTER_SBIN_DIR=%s\n' % (binDir, sbinDir))
+mcp_bin_dirs.close()
 
 setup(name='master', version='0.1',
 	author="Evan Felix",
@@ -83,7 +90,7 @@ setup(name='master', version='0.1',
 	packages=['master'],
 
 	scripts = thescripts,
-	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf'])],
+	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh'])],
 	#requires=['python (>=2.4)','hostparser','postgresql-python'],
 	cmdclass = {
 		'install_scripts': local_install_scripts,

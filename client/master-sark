@@ -6,10 +6,14 @@
 
 [ -r /etc/mcp.conf ] || exit 0
 
+# Source the master path config
+[ -f /etc/mcp-bin-dirs.sh ] && . /etc/mcp-bin-dirs.sh
+MASTER_BIN_DIR=${MASTER_BIN_DIR:-/usr/bin}
+
 case "$1" in
     start)
 		/sbin/modprobe eeprom
-	    /usr/bin/sark >> /var/log/sark.log 2>&1
+		${MASTER_BIN_DIR}/sark >> /var/log/sark.log 2>&1
 	;;
 	*)
 	echo "Usage: $0 start"

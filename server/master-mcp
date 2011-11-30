@@ -19,15 +19,19 @@ export LD_LIBRARY_PATH=/home/efelix/mscf/trunk/master
 # Check that networking is up.
 [  ${NETWORKING} = "no" ] && exit 0
 
+# Source the master path config
+[ -f /etc/mcp-bin-dirs.sh ] && . /etc/mcp-bin-dirs.sh
+MASTER_SBIN_DIR=${MASTER_SBIN_DIR:-/usr/sbin}
+
 # make sure mcp is installed and executable
-[ -x /mscf/mscf/sbin/mcp  ] || exit 1
+[ -x ${MASTER_SBIN_DIR}/mcp  ] || exit 1
 
 
 # See how we were called.
 case "$1" in
   start)
     echo -n "Starting master-mcp: "
-    daemon /mscf/mscf/sbin/mcp
+    daemon ${MASTER_SBIN_DIR}/mcp
     echo
     touch /var/lock/subsys/mcp
     ;;
