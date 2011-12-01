@@ -9,7 +9,7 @@ def basicdebug(msg):
 config = {
 	"config_file"       : "/etc/mcp.conf",
     "privileged_conf"   : "/etc/mcp-priv.conf",
-	"server_url"        : "http://localhost:627",
+	"server_url"        : "http://master:627",
 	"sark_modules"      : ("all",),
 	"database_server"   : "",
 	"database_name"     : "master",
