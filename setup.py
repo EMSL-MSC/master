@@ -1,13 +1,65 @@
 #!/usr/bin/python
 # vim: noet:ts=4:sw=4
 
-
 #from setuptools import setup,find_packages
 from distutils import sysconfig
-from distutils.core import setup
+from distutils.core import setup, Distribution
 from distutils.command.install_scripts import install_scripts
 from distutils.command.build_scripts import build_scripts
 from distutils.command.bdist_rpm import bdist_rpm
+
+def committed_rev():
+	try:
+		import pysvn,os,sys
+		client = pysvn.Client()
+		revs = []
+		for root, dirs, files in os.walk(sys.path[0]):
+			if '.svn' in dirs:
+				dirs.remove('.svn')
+
+			for f in files:
+				try:
+					entry = client.info(os.path.join(root,f))
+
+					if not entry or entry.commit_revision.kind !=  pysvn.opt_revision_kind.number:
+						raise Exception("Entry not in subversion.")
+					revs.append(entry.commit_revision.number)
+				except:
+					pass
+		return max(revs)
+	except Exception, msg:
+		try:
+			import _version
+
+			return int(_version.revision)
+		except:
+			print "Unable to read _version."
+			pass
+		print msg,
+		print '-- aborting search for subversion repository revision number'
+		return 0
+
+class svnDistribution(Distribution):
+	def __init__(self, attrs):
+		build_num = committed_rev()
+		if build_num:
+			attrs['revision'] = '%i'% build_num
+			attrs['version'] = '%s-r%s'% (attrs['version'],attrs['revision'])
+			try:
+				filename, format = attrs['version_file']
+				file(filename, 'w').write(format% (build_num,attrs['version']))
+			except KeyError:
+				pass
+		try:
+			del attrs['version_file']
+		except KeyError:
+			pass
+		try:
+			del attrs['revision']
+		except KeyError:
+			pass
+		Distribution.__init__(self, attrs)
+		
 
 class local_install_scripts(install_scripts):
 
@@ -88,6 +140,7 @@ setup(name='master', version='0.1',
 	url="https://cvs.pnl.gov/mscf/wiki/MASTER",
 	package_dir= {'master':'lib/master'},
 	packages=['master'],
+	distclass=svnDistribution,
 
 	scripts = thescripts,
 	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh'])],
