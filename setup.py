@@ -2,6 +2,8 @@
 # vim: noet:ts=4:sw=4
 
 #from setuptools import setup,find_packages
+import sys
+import tempfile
 from distutils import sysconfig
 from distutils.core import setup, Distribution
 from distutils.command.install_scripts import install_scripts
@@ -44,7 +46,7 @@ class svnDistribution(Distribution):
 		build_num = committed_rev()
 		if build_num:
 			attrs['revision'] = '%i'% build_num
-			attrs['version'] = '%s-r%s'% (attrs['version'],attrs['revision'])
+			attrs['version'] = '%s_r%s'% (attrs['version'],attrs['revision'])
 			try:
 				filename, format = attrs['version_file']
 				file(filename, 'w').write(format% (build_num,attrs['version']))
@@ -111,6 +113,18 @@ class local_bdist_rpm(bdist_rpm):
 		if not self.post_install:
 			self.post_install = 'misc/redhat_post_install'
 		self.fix_python = True
+
+		#little hack to avoid pyc and pyo files
+		filename=tempfile.mkstemp()[1]
+		print filename
+		string='%s setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES\n'%(sys.executable)
+		string+="sed -i -e 's/\(.*\.py$\)/\\1\\n\\1c\\n\\1o/' INSTALLED_FILES\n"
+		o=open(filename,'w')
+		o.write(string)
+		o.close()
+		self.install_script = filename
+		#end hack
+
 		bdist_rpm.finalize_options(self)
 
 #crappy chinook hack
