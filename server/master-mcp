@@ -7,9 +7,6 @@
 # config: /etc/mcp.conf /etc/mcp-priv.conf
 #
 
-#hack for now, remove when the library is in the right place:
-export LD_LIBRARY_PATH=/home/efelix/mscf/trunk/master
-
 # Source function library.
 . /etc/rc.d/init.d/functions
 
