@@ -12,7 +12,7 @@ else
 fi
 
 # This should be a comma separated list of required RPM packages
-required_rpms="hostparser, python-twisted-core, python-twisted-names, python-twisted-web"
+required_rpms="hostparser, python-twisted-core, python-twisted-names, python-twisted-web, postgresql-python"
 
 
 # I would like to just use distutils, but I don't think there is a way to force the RPM spec file to add the Requires
