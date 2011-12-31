@@ -138,7 +138,7 @@ else:
 	sbinDir = '/usr/sbin'
 
 paths = [ '%s/' % binDir, "/etc/init.d", "%s/" % sbinDir ]
-scr = [['client/master','client/sark',
+scr = [['client/master','client/sark','client/sark-sma',
 		'client/nadmin', 'client/mcehandler'],
 		["client/master-sark","server/master-mcp"], ["server/mcp"] ]
 thescripts = zip (paths,scr)
