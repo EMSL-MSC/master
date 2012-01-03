@@ -2,7 +2,12 @@
 
 import os
 import sys
-import xml.etree.ElementTree
+try:
+	import xml.etree.ElementTree
+	myelementtree = xml.etree.ElementTree
+except ImportError:
+	import elementtree.ElementTree
+	myelementtree = elementtree.ElementTree
 from util import mapit
 import master
 import pexpect
@@ -85,7 +90,8 @@ class smamgr:
 
 	
 		hsvs={}
-		e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("ls system full xml"))
+		#e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("ls system full xml"))
+		e = myelementtree.fromstring(self.runcmdstoxml("ls system full xml"))
 		for o in e.getiterator("object"):
 			d={}
 			for k,v in map.items():
@@ -105,7 +111,7 @@ class smamgr:
 				'operationalstate'		:'state',
 				'operationalstatedetail':	'statedetail' }
 
-		e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls vdisk full xml"))
+		e = myelementtree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls vdisk full xml"))
 		d={}
 
 		for o in e.getiterator("object"):
@@ -125,7 +131,7 @@ class smamgr:
 				'emu/firmwareversion'	: 'emu.fwver',
 				'operationalstatedetail':	'statedetail' }
 
-		e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls diskshelf full xml"))
+		e = myelementtree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls diskshelf full xml"))
 		d={}
 
 		for o in e.getiterator("object"):
@@ -168,7 +174,7 @@ class smamgr:
 				'operationalstatedetail':	'statedetail' }
 
 
-		e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls disk full xml"))
+		e = myelementtree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls disk full xml"))
 		d={}
 
 		for o in e.getiterator("object"):
@@ -197,7 +203,7 @@ class smamgr:
 				'operationalstatedetail':	'statedetail' }
 
 
-		e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls controller full xml"))
+		e = myelementtree.fromstring(self.runcmdstoxml("select cell %s"%(hsvname),"ls controller full xml"))
 		d={}
 
 		for o in e.getiterator("object"):
