@@ -54,7 +54,7 @@ case "$1" in
     stop
     ;;
   status)
-    status mcp
+    status -p ${pidfile} $mcp
     RETVAL=$?
     ;;
   restart)
