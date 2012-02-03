@@ -6,6 +6,7 @@ Below any parameter requiring a node, status, user, or property accepts a symbol
 """
 
 import os
+import atexit
 import sys
 import time
 import master
@@ -676,6 +677,9 @@ def daemonize(user = None, group = None):
 	if group:
 		os.setegid(group)
 
+def delpid():
+	os.remove(master.config['mcp_pid_file'])
+
 def main():
 	"""Function to start up the server and serve the pages till the end of time."""
 	global connPool
@@ -705,6 +709,13 @@ def main():
 		daemonize()
 	else:
 		master.debug = master.basicdebug
+
+	# Write PID file
+	if master.config['mcp_pid_file'] != None:
+		atexit.register(delpid)
+		pidfile = file(master.config['mcp_pid_file'], 'w+')
+		pidfile.write(str(os.getpid()))
+		pidfile.close()
 
 	#TODO make numConnections configurable
 	connPool = adbapi.ConnectionPool(

@@ -22,7 +22,8 @@ config = {
 	"mcp_port"          : 627,
 	"mcp_host_authorization" : True,
 	"web_interface"     : False,
-	"web_directory"     : "/usr/share/mcp/web"
+	"web_directory"     : "/usr/share/mcp/web",
+	"mcp_pid_file"      : "/var/run/mcp.pid"
 }
 
 def load_config():

@@ -22,29 +22,46 @@ MASTER_SBIN_DIR=${MASTER_SBIN_DIR:-/usr/sbin}
 
 # make sure mcp is installed and executable
 [ -x ${MASTER_SBIN_DIR}/mcp  ] || exit 1
+mcp=${MASTER_SBIN_DIR}/mcp
 
+pidfile=${PIDFILE-/var/run/mcp.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/master-mcp}
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
+RETVAL=0
+
+start() {
+    echo -n "Starting master-mcp: "
+    daemon --pidfile=${pidfile} $mcp
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && touch ${lockfile}
+    return $RETVAL
+}
+stop() {
+    echo -n "Shutting down master-mcp: "
+    killproc -p ${pidfile} -d ${STOP_TIMEOUT} $mcp
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
 # See how we were called.
 case "$1" in
   start)
-    echo -n "Starting master-mcp: "
-    daemon ${MASTER_SBIN_DIR}/mcp
-    echo
-    touch /var/lock/subsys/mcp
+    start
     ;;
   stop)
-    echo -n "Shutting down master-mcp: "
-    killproc mcp
-    echo
-    rm -f /var/lock/subsys/mcp
+    stop
     ;;
   status)
     status mcp
+    RETVAL=$?
     ;;
   restart)
     echo -n "Restarting master-mcp: "
-    $0 stop
-	$0 start
+    stop
+    start
+    RETVAL=$?
     echo
     ;;
   *)
@@ -52,4 +69,4 @@ case "$1" in
     exit 1
 esac
 
-exit 0
+exit $RETVAL
