@@ -25,7 +25,7 @@ MASTER_SBIN_DIR=${MASTER_SBIN_DIR:-/usr/sbin}
 mcp=${MASTER_SBIN_DIR}/mcp
 
 pidfile=${PIDFILE-/var/run/mcp.pid}
-lockfile=${LOCKFILE-/var/lock/subsys/master-mcp}
+lockfile=${LOCKFILE-/var/lock/subsys/mcp}
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
 RETVAL=0
