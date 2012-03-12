@@ -7,15 +7,16 @@ except ImportError:
 
 setup(
     name='master',
-    version='0.3.2',
+    version='0.3.4',
     description='',
     author='',
     author_email='',
     url='',
     install_requires=[
-        "Pylons>=0.9.7",
-        "SQLAlchemy>=0.5",
-        "Mako",
+        "Pylons>=1.0",
+        "SQLAlchemy>=0.7.5",
+        "psycopg2",
+        "Mako>=0.5",
     ],
     setup_requires=["PasteScript>=1.6.3"],
     packages=find_packages(exclude=['ez_setup']),

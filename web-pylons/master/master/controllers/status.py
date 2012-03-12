@@ -59,7 +59,7 @@ class StatusController(BaseController):
                                     and time >= :start
                                     and time <= :end
                                 GROUP BY
-                                    time
+                                    date_trunc('hour', time)
                         """
                     ).params(
                         status_id=status.id,

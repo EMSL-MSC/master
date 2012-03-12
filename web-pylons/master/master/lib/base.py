@@ -38,7 +38,7 @@ class BaseController(WSGIController):
                     - (time.mktime(event_instance.time.timetuple()) \
                        % (int(period)*3600))
             events_per_period[period_bucket] = events_per_period.get(
-                                                    period_bucket, 0) + 1
+                                                    period_bucket, 0) + event_instance.count
         periods = events_per_period.keys()
         periods.sort()
         frequency_dataset = []
