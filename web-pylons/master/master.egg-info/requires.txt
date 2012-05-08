@@ -1,6 +1,7 @@
-Pylons>=0.9.7
-SQLAlchemy>=0.5
-Mako
+Pylons>=1.0
+SQLAlchemy>=0.7.5
+psycopg2
+Mako>=0.5
 
 [PostgreSQL]
 psycopg2
