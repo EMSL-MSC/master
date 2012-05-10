@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+#
+# vim: noet:ts=4:sw=4
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
 # All rights reserved.
@@ -54,7 +57,6 @@
 # 	not infringe privately owned rights.  
 # 
 
-import os
 import sys
 try:
 	import xml.etree.ElementTree
@@ -62,22 +64,21 @@ try:
 except ImportError:
 	import elementtree.ElementTree
 	myelementtree = elementtree.ElementTree
-from util import mapit
 import master
 import pexpect
-
-#globals... no threading!!!
-_dicts=[]
-_dict={}
-_key=None
 
 
 class smamgr:
 
-	def __init__(self, server, sma):
+	def __init__(self, server, sma, server_username, sma_username, sma_password):
+		master.load_privileged_config()
 		self.server = server
 		self.sma = sma
-		self.thessh = pexpect.spawn("ssh -l root -t %s sssu"%(server),timeout=300)
+		self.server_username = server_username
+		self.sma_username = sma_username
+		self.sma_password = sma_password
+		self.thessh = pexpect.spawn(
+			"ssh -l %s -t %s sssu"%(server_username, server),timeout=300)
 		#self.thessh.logfile=sys.stderr
 
 		c=self.thessh
@@ -85,14 +86,13 @@ class smamgr:
 		c.expect("Manager:")
 		c.sendline(self.sma)
 		c.expect("Username:")
-		c.sendline("Administrator") #should be in config
+		c.sendline(self.sma_username)
 		c.expect("Password")
-		c.sendline("hpinvent")
+		c.sendline(self.sma_password)
 
 		c.expect("NoSystemSelected>")
 		c.sendline("set options NOCOMMAND_DELAY DISPLAY_STATUS display_width=500")
 		c.expect("NoSystemSelected>")
-
 
 	def runcmdstoxml(self,*cmds):
 		data=""
@@ -108,30 +108,6 @@ class smamgr:
 
 		return "<wrapper>"+data+"</wrapper>"
 
-
-
-
-	def runcmdstoxml_old(self,*cmds):
-		#create script file
-		f=open("/tmp/tmp.sssu.script","w")
-		f.write("set options command_delay=0 display_width=500\n")
-		f.write("select manager %s USERNAME=administrator password=hpinvent\n"%(self.sma))
-		for c in cmds:
-			master.debug("SMA command:"+c)
-			f.write("%s\n"%(c))
-		f.write("exit\n")
-		f.close()
-	
-		#copy it
-		os.system("scp -q /tmp/tmp.sssu.script %s:/tmp/tmp.sssu.script"%(self.server))
-
-		#execute it	
-		output=os.popen("""ssh %s 'sssu "file /tmp/tmp.sssu.script"'"""%(self.server),"r");
-		l = output.readlines();
-		
-		return "<wrapper>"+''.join(l)+"</wrapper>"
-
-		
 	def gethsvinfo(self):
 		map = { 'objectwwn'			:'wwn',
 				'firmwareversion'	:'fwver',
@@ -142,7 +118,7 @@ class smamgr:
 				'availablestoragespace':	'availablespace',
 				'operationalstatedetail':	'statedetail' }
 
-	
+
 		hsvs={}
 		#e = xml.etree.ElementTree.fromstring(self.runcmdstoxml("ls system full xml"))
 		e = myelementtree.fromstring(self.runcmdstoxml("ls system full xml"))
@@ -286,27 +262,27 @@ class smamgr:
 		return d
 
 
-def get_hsv_info(ioserver,hosts):
-	d={};
-	
+def get_hsv_info(ioserver, hosts, server_user, sma_username, sma_password):
+	d={}
+
 	for h in hosts:
-		s = smamgr(ioserver,h);
+		s = smamgr(ioserver, h, server_user, sma_username, sma_password)
 		d.update(s.gethsvinfo())
 
 	return d
 
 
 if __name__ == "__main__":
-	s = smamgr("tio1","tsma");
+	master.load_config()
+	master.load_privileged_config()
+	if len(sys.argv) != 4:
+		print "Usage: %s <ioserver> <ioserver_user> <sma>"% (sys.argv[0],)
+		sys.exit()
+	s = smamgr(sys.argv[1], sys.argv[3], sys.argv[2],
+				master.config['sma_username'], master.config['sma_password'])
 
 	for k,v in s.gethsvinfo().items():
 		print k
 		for dk,dv in v.items():
 			print "\t",dk,dv
-
-	#x = "<wrapper>"+s.runcmdstoxml(sma,"ls system full xml")+"</wrapper>"
-	#print x
-	#e = xml.etree.ElementTree.fromstring(x)
-	#for o in e.getiterator("object"):
-	#	print o.find("statestring").text
 

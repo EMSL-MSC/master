@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
 # All rights reserved.
@@ -74,8 +75,6 @@ import os
 import xmlrpclib
 import sys
 import getopt
-import master.gather
-import master.sma
 import socket
 
 # Procedure:
@@ -137,7 +136,10 @@ def main():
 	mcp = xmlrpclib.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
 
-	hsvs = master.sma.get_hsv_info(master.config["sma_server"],master.config["sma_list"])
+	hsvs = master.sma.get_hsv_info(
+        master.config["sma_server"], master.config["sma_list"],
+        master.config["sma_server_username"], master.config["sma_username"],
+        master.config["sma_password"])
 
 	for hsv in hsvs:
 		props = hsvs[hsv]
