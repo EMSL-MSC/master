@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 # vim: noet:ts=4:sw=4:
 #
 # Copyright © 2008,2009, Battelle Memorial Institute

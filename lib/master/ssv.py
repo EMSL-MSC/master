@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
 # All rights reserved.
