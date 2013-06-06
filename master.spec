@@ -55,5 +55,5 @@ fi
 %{_sysconfdir}/init.d/master*
 %{_sysconfdir}/mcp*
 %{python_sitelib}/%{name}/*
-%{python_sitearch}/%{name}/*
+#%{python_sitearch}/%{name}/*
 %{_sbindir}/*
