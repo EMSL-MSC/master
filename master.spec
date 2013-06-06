@@ -12,6 +12,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 Url: https://cvs.pnl.gov/mscf/wiki/MASTER
 BuildRequires: python2-devel
+BuildRequires: tcl-devel
+BuildRequires: tk-devel
 Requires(post): chkconfig
 Requires(preun): chkconfig
 # This is for /sbin/service
@@ -26,7 +28,6 @@ UNKNOWN
 %endif
 
 
-%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 
 %prep
