@@ -25,6 +25,10 @@ UNKNOWN
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 %endif
 
+
+
+echo %{python_sitearch}/%{name}/*
+
 %prep
 %setup
 
@@ -54,6 +58,6 @@ fi
 %{_bindir}/*
 %{_sysconfdir}/init.d/master*
 %{_sysconfdir}/mcp*
-%{python_sitelib}/%{name}/*
-#%{python_sitearch}/%{name}/*
+#%{python_sitelib}/%{name}/*
+%{python_sitearch}/%{name}/*
 %{_sbindir}/*
