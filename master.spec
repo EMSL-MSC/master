@@ -51,3 +51,8 @@ fi
 
 %files
 %defattr(-,root,root)
+%{_bindir}/*
+%{_sysconfdir}/init.d/master*
+%{_sysconfdir}/mcp*
+%{python_sitearch}/%{name}/*
+%{_sbindir}/*
