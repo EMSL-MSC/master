@@ -12,8 +12,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 Url: https://cvs.pnl.gov/mscf/wiki/MASTER
 BuildRequires: python2-devel
-BuildRequires: tcl-devel
-BuildRequires: tk-devel
+#BuildRequires: tcl-devel
+#BuildRequires: tk-devel
 Requires(post): chkconfig
 Requires(preun): chkconfig
 # This is for /sbin/service
@@ -59,5 +59,5 @@ fi
 %{_bindir}/*
 %{_sysconfdir}/init.d/master*
 %{_sysconfdir}/mcp*
-%{python_sitearch}/%{name}/*
+#%{python_sitearch}/%{name}/*
 %{_sbindir}/*
