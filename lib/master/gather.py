@@ -93,7 +93,11 @@ def lineGrab(file):
 
 	Grab the first line of a given file
 	"""
-	return fileGrab(file)[0].rstrip()
+        if os.path.exists(file):
+                return fileGrab(file)[0].rstrip()
+        else:
+                NoFileString="No File: Virtual Device?"
+                return NoFileString.rstrip()
 
 def getMAC(interface):
 	"""getMAC(interface) => dictionary
