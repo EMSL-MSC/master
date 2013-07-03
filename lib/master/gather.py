@@ -68,7 +68,11 @@ import time
 from master import debug,dell,amcc,hp,mem
 from master.util import *
 
+
 verbs={}
+
+class FileMissingException(Exception):
+	pass
 
 def verb(verbname):
 	def embedded(func):
@@ -96,8 +100,7 @@ def lineGrab(file):
         if os.path.exists(file):
                 return fileGrab(file)[0].rstrip()
         else:
-                NoFileString="No File: Virtual Device?"
-                return NoFileString.rstrip()
+			raise FileMissingException(file)
 
 def getMAC(interface):
 	"""getMAC(interface) => dictionary
@@ -228,7 +231,10 @@ def getIBInfo(id):
 	d={}
 	for (file,key) in togather:
 		if os.access(_ibbase,os.R_OK): 
-			d[_ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
+			try:
+				d[_ib+id+"."+key] = lineGrab(_ibbase+"/"+id+"/"+file)
+			except FileMissingException:
+				pass
 	return d
 
 def getDMIInfo():
