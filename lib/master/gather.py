@@ -301,6 +301,43 @@ def getMemoryInfo():
 	"""
 	return mem.getMemoryInfo()
 
+@verb("mic")
+def getIntelMICInfo():
+	"""getIntelMICInfo() -> dictionary
+
+		Gather information about the Intel MIC processors if they exist in the system"""
+	sysmap = {
+		"Driver Version":"driver_version",
+		"MPSS Version":"mpss_version"
+	}
+	micmap = {
+		"Flash Version":"flash_version",
+		"SMC Firmware Version":"smc_fw_version",
+		"SMC Boot Loader Version":"smc_boot_version",
+		"uOS Version":"uos_version",
+		"Device Serial Number":"serial",
+		"Coprocessor Stepping":"setepping",
+		"Board SKU":"sku",
+		"Total No of Active Cores":"cores"
+	}
+
+	d={}
+	if os.access("/opt/intel/mic/bin/micinfo",os.X_OK):
+		lines = os.popen("/opt/intel/mic/bin/micinfo").readlines()
+		#find sections
+		devstart=[]
+		for i in xrange(len(lines)):
+			if lines[i].startswith("Device No:"):
+				devstart.append(i)
+		if devstart:
+			d.update(doLineParse(lines[:devstart[0]],"mic",sysmap))
+		devstart.append(len(lines))
+		for i in xrange(len(devstart)-1):
+			mic = lines[devstart[i]].split(' ')[-1].rstrip()	
+			d.update(doLineParse(lines[devstart[i]:devstart[i+1]],mic,micmap))
+			
+	return d	
+
 @verb("all")
 def gatherALL():
 	d={}
