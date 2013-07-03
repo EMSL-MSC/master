@@ -227,7 +227,7 @@ _ibbase="/sys/class/infiniband/"
 _ib="infiniband."
 def getIBInfo(id):
 	"""retrieve information about a specific IB card"""
-	togather = [("fw_ver","fwver"),("node_guid","guid"),("hca_type","type")]
+	togather = [("fw_ver","fwver"),("node_guid","guid"),("hca_type","type"),("board_id","id")]
 	d={}
 	for (file,key) in togather:
 		if os.access(_ibbase,os.R_OK): 
