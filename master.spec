@@ -1,5 +1,5 @@
 %define name master
-%define version 0.3
+%define version 0.4
 
 Summary: An asset managment system, designed to watch the cluster and also manage its state
 Name: %{name}
@@ -12,6 +12,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 Url: https://cvs.pnl.gov/mscf/wiki/MASTER
 BuildRequires: python2-devel
+Requires: pexpect
 #BuildRequires: tcl-devel
 #BuildRequires: tk-devel
 Requires(post): chkconfig
