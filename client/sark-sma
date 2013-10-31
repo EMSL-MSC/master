@@ -71,6 +71,7 @@ sark-sma - MASTER SMA property gathering
 """
 
 import master
+import master.sma
 import os
 import xmlrpclib
 import sys
