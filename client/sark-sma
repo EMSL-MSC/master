@@ -64,6 +64,7 @@ sark-sma - MASTER SMA property gathering
 
 	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
 	-s <server>       Specify Server to connect to to run sssu on.
+	-u <username>     Specify Server Username
 	-a <sma>,<sma>,.. Specify list of SMA's to connect to for hsv information
 	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
 	-v                Verbose, prints out each property as it is uploaded to the mcp
@@ -98,7 +99,7 @@ def main():
 	verbose=None
 	serverurl=""
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:s:a:m:vdh")
+	optlist,args = getopt.getopt(sys.argv[1:],"c:s:u:a:m:vdh")
 
 	if args:
 		print "Extra Arguments Given:" +args
@@ -111,6 +112,8 @@ def main():
 			smas += val.split(",")
 		if arg == "-s":
 			server = val;
+		if arg == "-u":
+			server_user = val;
 		if arg == "-m":
 			serverurl=val
 		if arg == "-v":
@@ -122,10 +125,14 @@ def main():
 			return
 	
 	master.load_config()
+	master.load_privileged_config()
 	
 	if serverurl:
 		master.config["server_url"]=serverurl
-	
+
+	if server_user:
+		master.config["sma_server_username"]	
+
 	if smas:
 		master.config["sma_list"]=smas
 

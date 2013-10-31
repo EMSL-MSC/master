@@ -78,7 +78,9 @@ config = {
 	"mcp_host_authorization" : True,
 	"web_interface"     : False,
 	"web_directory"     : "/usr/share/mcp/web",
-	"mcp_pid_file"      : "/var/run/mcp.pid"
+	"mcp_pid_file"      : "/var/run/mcp.pid",
+	"sma_server_username" : "root",
+	"sma_username" : "Administrator"
 }
 
 def load_config():
