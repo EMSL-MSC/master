@@ -97,6 +97,7 @@ def main():
 	smas=[]
 	server=None
 	verbose=None
+	server_user=None
 	serverurl=""
 
 	optlist,args = getopt.getopt(sys.argv[1:],"c:s:u:a:m:vdh")
