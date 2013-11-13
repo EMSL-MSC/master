@@ -1,0 +1,157 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+#
+# Copyright © 2013 Battelle Memorial Institute
+# All rights reserved.
+# This File is part of the MASTER software, Please see a copy of the LICENSE file included for license information
+# 
+""" Sark-DDN - the properties Gatherer for DDN Disk Array's
+"""
+
+usage="""
+sark-ddn - MASTER DDN property gathering
+
+	Use: sark-ddn [-c <config file>] [-m <xmlrpcurl>] [-a <array> ] [-d]
+
+	-c <config file>      Specify Alternate Location of configuration file. default: /etc/mcp.conf
+	-s <server>           Specify Server to connect to to run sssu on.
+	-a <array>,<array>,.. Specify list of DDN Arrays to query, as defined in the mcp.conf file
+	-m <xmlrpcurl>        Specify a specific URL for connection to the Master Control Program
+	-v                    Verbose, prints out each property as it is uploaded to the mcp
+	-d                    Debug Mode - Only gather properties and output them, Show debug messages
+"""
+
+import master
+import master.sfa
+import master.ef
+import os
+import xmlrpclib
+import sys
+import getopt
+import socket
+
+# Procedure:
+#  Parse command line
+#  Load Config
+#  Run Configured Gather Steps
+#
+#  Connect to mcp
+#  download mcp properties for short hostname
+#  update any changes
+#    if property name does not exist add it to the database
+#  
+#
+#  Exit
+def main():
+	
+	#defaults
+	ddnarrays=[]
+	verbose=None
+	serverurl=""
+
+	optlist,args = getopt.getopt(sys.argv[1:],"c:a:m:vdh")
+
+	if args:
+		print "Extra Arguments Given:" +args
+		return
+
+	for (arg,val) in optlist:
+		if arg == "-c":
+			master.config["config_file"]=val
+		if arg == "-a":
+			ddnarrays += val.split(",")
+		if arg == "-m":
+			serverurl=val
+		if arg == "-v":
+			verbose = True
+		if arg == "-d":
+			master.debug = master.basicdebug
+		if arg == "-h":
+			print usage
+			return
+	
+	master.load_config()
+	master.load_privileged_config()
+	
+	if serverurl:
+		master.config["server_url"]=serverurl
+
+	if ddnarrays:
+		master.config["ddn_array_list"]=ddnarrays
+
+	props={}
+	
+	mcp = xmlrpclib.Server(master.config["server_url"])
+	myname = socket.gethostname().split(".")[0]
+
+
+	arrays={}
+	for arr in ddnarrays:
+		hostlist=master.config["ddn_"+arr+"_hosts"].split(",")
+		user=master.config["ddn_"+arr+"_user"]
+		passwd=master.config["ddn_"+arr+"_pass"]
+		type=master.config["ddn_"+arr+"_type"]
+		if type == "ef":
+			arrays[arr]=master.ef.gatherEFInfo(hostlist,user,passwd)
+		if type == "sfa":
+			arrays[arr]=master.sfa.gatherSFAInfo(hostlist,user,passwd)
+
+
+	for arr in arrays:
+		props = arrays[arr]
+		if verbose: print "Processing:",arr
+
+		#check to see if node exists:
+		nodes = mcp.master.getNodes([arr])
+		if len(nodes) == 0:
+			print "Array node:",arr,"does not exist in database"
+			continue
+
+		sprops = mcp.master.getNodeProperties([arr])
+		if sprops.has_key(arr):
+			current = sprops[arr]
+		else:
+			if verbose: print "Array node:",arr,"no  properties found"
+			current = []
+
+		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
+		for k,v,ts,cmt in current:
+			if props.has_key(k) and props[k] == v:
+				master.debug("deleting key <"+k+"> because it is already on the server")
+				del(props[k])
+
+		# Everything that is left needs to updated on the server
+		for k,v in props.items():
+			try:
+				if verbose: print "Adding",k," => ",v
+				
+				res = mcp.master.updateNodeProperty(arr,k,v)
+				master.debug("updateNodeProperty: res = "+`res`)
+			except xmlrpclib.Fault,msg:
+				master.debug("Adding key <"+k+"> to db because:"+str(msg))
+				
+				try:
+					res = mcp.master.addProperty(k,"Added by Sark on "+myname)
+					master.debug("addProperty: res="+`res`)
+				except xmlrpclib.Fault:
+					print >>sys.stderr, "Error adding New property"
+					continue  # just move on
+				
+				try:
+					res = mcp.master.updateNodeProperty(arr,k,v)
+					pass
+				except xmlrpclib.Fault,msg:
+					print >>sys.stderr,"Error adding "+k+" => "+v+": "+str(msg)
+
+			except Exception,msg: #Will this ever happen
+				master.debug("Error updating property:"+k+":"+str(msg))
+				
+
+
+if __name__ == "__main__":
+	try:
+		main()
+	except KeyboardInterrupt:
+		pass
+
+

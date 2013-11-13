@@ -7,7 +7,7 @@ CREATE TABLE node (
 
 CREATE TABLE property (
     id serial NOT NULL PRIMARY KEY,
-    name character varying(32) UNIQUE,
+    name character varying(64) UNIQUE,
     description character varying(255)
 );
 
