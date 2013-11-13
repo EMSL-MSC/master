@@ -1,5 +1,5 @@
 %define name master
-%define version 0.4
+%define version 0.5
 
 Summary: An asset managment system, designed to watch the cluster and also manage its state
 Name: %{name}
