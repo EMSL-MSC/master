@@ -139,7 +139,7 @@ else:
 
 paths = [ '%s/' % binDir, "/etc/init.d", "%s/" % sbinDir ]
 scr = [['client/master','client/sark','client/sark-sma',
-		'client/nadmin', 'client/mcehandler'],
+		'client/nadmin', 'client/mcehandler','client/sark-ddn'],
 		["client/master-sark","server/master-mcp"], ["server/mcp"] ]
 thescripts = zip (paths,scr)
 
