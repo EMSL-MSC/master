@@ -59,7 +59,7 @@ def main():
 		if arg == "-c":
 			master.config["config_file"]=val
 		if arg == "-a":
-			ddnarrays += val.split(",")
+			ddnarrays = val
 		if arg == "-m":
 			serverurl=val
 		if arg == "-v":
