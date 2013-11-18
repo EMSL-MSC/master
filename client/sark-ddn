@@ -77,7 +77,7 @@ def main():
 		master.config["server_url"]=serverurl
 
 	if ddnarrays:
-		master.config["ddn_array_list"]=ddnarrays
+		master.config["ddn_arrays"]=ddnarrays
 
 	props={}
 	
@@ -86,11 +86,12 @@ def main():
 
 
 	arrays={}
-	for arr in ddnarrays:
+	for arr in master.config["ddn_arrays"].split(","):
 		hostlist=master.config["ddn_"+arr+"_hosts"].split(",")
 		user=master.config["ddn_"+arr+"_user"]
 		passwd=master.config["ddn_"+arr+"_pass"]
 		type=master.config["ddn_"+arr+"_type"]
+		master.debug("Array Info:%s %s %s %s"%(hostlist,user,passwd,type))
 		if type == "ef":
 			arrays[arr]=master.ef.gatherEFInfo(hostlist,user,passwd)
 		if type == "sfa":
