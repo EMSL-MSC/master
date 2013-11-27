@@ -338,6 +338,22 @@ def getIntelMICInfo():
 			
 	return d	
 
+@verb("bmc")
+def gatherBMCInfo():
+	d={}
+	lanmap = {
+		"MAC Address":"mac",
+	}
+	mcmap = {
+		"Firmware Revision":"fwver",
+		"Manufacturer Name":"vendor",
+		"Product ID":"prodid",
+	}
+	if os.access("/usr/bin/ipmitool",os.X_OK):
+		d=doLineParse(os.popen("/usr/bin/ipmitool lan print").readlines(),"bmc",lanmap)
+		d.update(doLineParse(os.popen("/usr/bin/ipmitool mc info").readlines(),"bmc",mcmap))
+	return d
+
 @verb("all")
 def gatherALL():
 	d={}
