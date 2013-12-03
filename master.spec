@@ -1,10 +1,10 @@
 %define name master
-%define version 0.5
+%define version 0.6
 
 Summary: An asset managment system, designed to watch the cluster and also manage its state
 Name: %{name}
 Version: %{version}
-Release: 2%{?dist}
+Release: 1%{?dist}
 Source0: %{name}-%{version}.tar.gz
 License: UNKNOWN
 Group: Development/Libraries
