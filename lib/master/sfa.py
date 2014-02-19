@@ -183,8 +183,6 @@ def gatherSFAInfo(hostlist,user,password):
 
 	for host in hostlist:
 		try:
-			#not sure why disconnect works better here, but it shouldent hurt
-			APIDisconnect()
 			APIConnect("https://"+host,auth=(user,password))
 
 			d.update(dumpSimple(SFAEnclosure,"enclosure",_enclosureProps))
@@ -200,7 +198,8 @@ def gatherSFAInfo(hostlist,user,password):
 			break
 		except APIException,msg:
 			print "Error",msg
-		APIDisconnect()
+		finally:
+			APIDisconnect()
 	return d
 
 
