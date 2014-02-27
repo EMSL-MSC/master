@@ -139,7 +139,8 @@ config = {
 	"web_directory"     : "/usr/share/mcp/web",
 	"mcp_pid_file"      : "/var/run/mcp.pid",
 	"sma_server_username" : "root",
-	"sma_username" : "Administrator"
+	"sma_username"      : "Administrator",
+	"micinfo"           : "/usr/bin/micinfo"
 }
 
 def load_config():

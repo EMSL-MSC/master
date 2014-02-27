@@ -65,7 +65,7 @@ FIXMES:
 import os
 import re
 import time
-from master import debug,dell,amcc,hp,mem
+from master import debug,dell,amcc,hp,mem,config
 from master.util import *
 
 
@@ -322,8 +322,8 @@ def getIntelMICInfo():
 	}
 
 	d={}
-	if os.access("/opt/intel/mic/bin/micinfo",os.X_OK):
-		lines = os.popen("/opt/intel/mic/bin/micinfo").readlines()
+	if os.access(config["micinfo"],os.X_OK):
+		lines = os.popen(config["micinfo"]).readlines()
 		#find sections
 		devstart=[]
 		for i in xrange(len(lines)):
