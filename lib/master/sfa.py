@@ -28,6 +28,14 @@ _expanderProps=(
 	"FirmwareVersion",
 	"Location",
 )
+_sepProps=(
+    "HealthState",
+    "PredictFailure",
+    "Present",
+    "FirmwareVersion",
+    "Location",
+    "SerialNumber",
+)               
 _diskProps=(
 	"HealthState",
 	"DiskHealthState",
@@ -194,6 +202,7 @@ def gatherSFAInfo(hostlist,user,password):
 			d.update(dumpEncPart(SFAPowerSupply,"power",_powerProps))
 			d.update(dumpEncPart(SFAFan,"fan",_fanProps))
 			d.update(dumpEncPart(SFAExpander,"expander",_expanderProps))
+			d.update(dumpEncPart(SFASEP,"sep",_sepProps))
 			d.update(dumpPools())
 			break
 		except APIException,msg:
@@ -215,6 +224,7 @@ if __name__=="__main__":
 	dumpEncPart(SFAPowerSupply,"power",_powerProps)
 	dumpEncPart(SFAFan,"fan",_fanProps)
 	dumpEncPart(SFAExpander,"expander",_expanderProps)
+	dumpEncPart(SFASEP,"sep",_sepProps)
 	dumpPools()
 
 	#dumpKeys()
