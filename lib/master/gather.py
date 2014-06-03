@@ -349,9 +349,13 @@ def gatherBMCInfo():
 		"Manufacturer Name":"vendor",
 		"Product ID":"prodid",
 	}
+	frumap = {
+		"Product Asset Tag":"asset",
+	}
 	if os.access("/usr/bin/ipmitool",os.X_OK):
 		d=doLineParse(os.popen("/usr/bin/ipmitool lan print").readlines(),"bmc",lanmap)
 		d.update(doLineParse(os.popen("/usr/bin/ipmitool mc info").readlines(),"bmc",mcmap))
+		d.update(doLineParse(os.popen("/usr/bin/ipmitool fru").readlines(),"bmc",frumap))
 	return d
 
 @verb("all")
