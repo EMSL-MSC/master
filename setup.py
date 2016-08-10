@@ -61,7 +61,7 @@ class svnDistribution(Distribution):
 		except KeyError:
 			pass
 		Distribution.__init__(self, attrs)
-		
+
 
 class local_install_scripts(install_scripts):
 
@@ -127,15 +127,9 @@ class local_bdist_rpm(bdist_rpm):
 
 		bdist_rpm.finalize_options(self)
 
-#crappy chinook hack
-import sys
-if "--chinook" in sys.argv:
-	sys.argv.remove("--chinook")
-	binDir = '/mscf/mscf/bin'
-	sbinDir = '/mscf/mscf/sbin'
-else:
-	binDir = '/usr/bin'
-	sbinDir = '/usr/sbin'
+
+binDir = '/usr/bin'
+sbinDir = '/usr/sbin'
 
 paths = [ '%s/' % binDir, "/etc/init.d", "%s/" % sbinDir ]
 scr = [['client/master','client/sark','client/sark-sma',
@@ -154,15 +148,14 @@ setup(name='master', version='0.7',
 	url="https://cvs.pnl.gov/mscf/wiki/MASTER",
 	package_dir= {'master':'lib/master'},
 	packages=['master'],
-	distclass=svnDistribution,
+	##### distclass=svnDistribution,
 
 	scripts = thescripts,
 	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh'])],
-	#requires=['python (>=2.4)','hostparser','postgresql-python'],
+	#requires=['python (>=2.4)','hostparser','postgresql-python','python-ply'],
 	cmdclass = {
 		'install_scripts': local_install_scripts,
 		'build_scripts': local_build_scripts,
 		'bdist_rpm':local_bdist_rpm
 	}
 )
-

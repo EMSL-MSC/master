@@ -1,0 +1,7 @@
+*.src.rpm
+*.noarch.rpm
+*.tar.gz
+*.pyo
+*.pyc
+.vagrant
+misc/mcp-bin-dirs.sh

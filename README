@@ -10,19 +10,8 @@ To setup a local server:
       local   all         master                               trust
 4. Reload the database configs
 5. Load the database as the master user
-    psql master -U master < server/master.sql 
-
-
-
-To install on chinook-test:
-python setup.py build --chinook
-sudo python setup.py install_lib
-sudo python setup.py install_scripts --chinook -d /  
-sudo python setup.py install_data
+    psql master -U master < server/master.sql
 
 
 To build master RPMs:
 python setup.py bdist_rpm --release="8"
-   or to build an rpm for chinook:
-python setup.py bdist_rpm --release="8" --chinook
-

@@ -1,0 +1,23 @@
+
+centos7-build:
+  script:
+    - docker build -t master-build7 . -f Dockerfile.build
+    - docker run -v `pwd`:/app/dist master-build7
+  artifacts:
+    paths:
+      - ./*.rpm
+    expire_in: 1 week
+  tags:
+    - docker
+
+centos6-build:
+  script:
+    - sed -i -e s/centos:7/centos:6/ Dockerfile.build
+    - docker build -t master-build6 . -f Dockerfile.build
+    - docker run -v `pwd`:/app/dist master-build6
+  artifacts:
+    paths:
+      - ./*.rpm
+    expire_in: 1 week
+  tags:
+    - docker
