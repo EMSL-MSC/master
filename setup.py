@@ -141,7 +141,7 @@ mcp_bin_dirs = open('misc/mcp-bin-dirs.sh', 'w')
 mcp_bin_dirs.write('#!/bin/sh\nexport MASTER_BIN_DIR=%s\nexport MASTER_SBIN_DIR=%s\n' % (binDir, sbinDir))
 mcp_bin_dirs.close()
 
-setup(name='master', version='0.7',
+setup(name='master', version='0.8',
 	author="Evan Felix",
 	author_email="e@pnl.gov",
 	description="An asset managment system, designed to watch the cluster and also manage its state",
@@ -151,7 +151,7 @@ setup(name='master', version='0.7',
 	##### distclass=svnDistribution,
 
 	scripts = thescripts,
-	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh'])],
+	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh']),('/usr/share/master/',['server/master.sql'])],
 	#requires=['python (>=2.4)','hostparser','postgresql-python','python-ply'],
 	cmdclass = {
 		'install_scripts': local_install_scripts,
