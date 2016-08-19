@@ -84,7 +84,7 @@ CREATE TABLE node_status (
     user_id integer NOT NULL REFERENCES users(id)
 );
 
-CREATE LANGUAGE plpgsql;
+CREATE OR REPLACE LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION node_status_log_insert_tf()
 RETURNS TRIGGER AS $$
