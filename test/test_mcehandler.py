@@ -3,7 +3,7 @@
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
 # All rights reserved.
-# 
+#
 # 1.	Battelle Memorial Institute (hereinafter Battelle) hereby grants permission
 # 	to any person or entity lawfully obtaining a copy of this software and
 # 	associated documentation files (hereinafter “the Software”) to redistribute
@@ -11,25 +11,25 @@
 # 	modification.  Such person or entity may use, copy, modify, merge, publish,
 # 	distribute, sublicense, and/or sell copies of the Software, and may permit
 # 	others to do so, subject to the following conditions:
-# 
+#
 # 	•	Redistributions of source code must retain the above copyright
-# 		notice, this list of conditions and the following disclaimers. 
+# 		notice, this list of conditions and the following disclaimers.
 # 	•	Redistributions in binary form must reproduce the above copyright
 # 		notice, this list of conditions and the following disclaimer in the
 # 		documentation and/or other materials provided with the distribution.
 # 	•	Other than as used herein, neither the name Battelle Memorial
 # 		Institute or Battelle may be used in any form whatsoever without the
-# 		express written consent of Battelle.  
+# 		express written consent of Battelle.
 # 	•	Redistributions of the software in any form, and publications based
 # 		on work performed using the software should include the following
 # 		citation as a reference:
-# 
+#
 # 			(A portion of) The research was performed using EMSL, a
 # 			national scientific user facility sponsored by the
 # 			Department of Energy's Office of Biological and
 # 			Environmental Research and located at Pacific Northwest
 # 			National Laboratory.
-# 
+#
 # 2.	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -40,7 +40,7 @@
 # 	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # 	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # 	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 # 3.	The Software was produced by Battelle under Contract No. DE-AC05-76RL01830
 # 	with the Department of Energy.  The U.S. Government is granted for itself
 # 	and others acting on its behalf a nonexclusive, paid-up, irrevocable
@@ -55,18 +55,19 @@
 from mcehandler import count_events
 from nose.tools import raises, eq_
 
+
 def test_count_events_counts_properly():
     cases = [
-        ({'a': [('MCE', 1, 'Test'), ('MCE_MAINT', 2 ,'Test')]}, {'a': 0}),
+        ({'a': [('MCE', 1, 'Test'), ('MCE_MAINT', 2, 'Test')]}, {'a': 0}),
         ({'a': [('MCE_MAINT', 1, 'Test'), ('MCE', 2, 'Test')]}, {'a': 1}),
         ({'a': [('MCE', 1, 'Test')]}, {'a': 1}),
-        ({'a': [('MCE', 1, 'Test')], 'b': [('MCE',1,'Test')]},
+        ({'a': [('MCE', 1, 'Test')], 'b': [('MCE', 1, 'Test')]},
          {'a': 1, 'b': 1}
-        ),
+         ),
         (
             {
                 'a': [('MCE', 1, 'Test1'), ('MCE', 1, 'Test2')],
-                'b': [('MCE',1,'Test2')]
+                'b': [('MCE', 1, 'Test2')]
             },
             {'a': 1, 'b': 1}
         ),
@@ -77,7 +78,7 @@ def test_count_events_counts_properly():
                     ('MCE', 1, 'Test2'),
                     ('MCE', 1, 'Test1')
                 ],
-                'b': [('MCE',1,'Test2')]
+                'b': [('MCE', 1, 'Test2')]
             },
             {'a': 2, 'b': 1}
         ),
@@ -88,7 +89,7 @@ def test_count_events_counts_properly():
                     ('MCE', 1, 'Test2'),
                     ('MCE', 1, 'Test1')
                 ],
-                'b': [('MCE',1,'Test2')]
+                'b': [('MCE', 1, 'Test2')]
             },
             {'a': 1, 'b': 1}
         ),
@@ -97,7 +98,8 @@ def test_count_events_counts_properly():
         res = count_events(case[0], 0)
         yield eq_, res, case[1]
 
+
 @raises(ValueError)
 def test_count_events_fails_on_non_float():
     count_events({'a': [('MCE', 'Hello', 'Test'),
-                                        ('MCE', 'Goodbye', 'Test')]}, 0)
+                        ('MCE', 'Goodbye', 'Test')]}, 0)

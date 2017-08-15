@@ -124,7 +124,7 @@ ${ui.datePicker(selector=u'.datepicker')}
                 data_table.append(row_snippet);
             }
         }
-        function fetch_data() { 
+        function fetch_data() {
             var the_url = '';
             for ( var item_class in the_urls ) {
                 if (current_container.hasClass(item_class)) {
@@ -140,7 +140,7 @@ ${ui.datePicker(selector=u'.datepicker')}
                 } else {
                     the_url += '/start_date/' + start_date;
                 }
-            } 
+            }
             if ($("input#statusfilter").is(":checked")) {
                 the_url += '/filter/1';
             }

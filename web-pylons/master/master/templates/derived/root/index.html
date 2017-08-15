@@ -41,7 +41,7 @@
       function removeData() {
         $('#NodeDashboard table').remove();
       }
-      function reloadData() { 
+      function reloadData() {
         $.ajax({
            url: "${h.url( controller=u'node', action=u'top', what=u'maint', how_many=10)}" + '/period/' + $("#down_period").val(),
            method: 'GET',

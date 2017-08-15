@@ -12,6 +12,7 @@ import master.model as model
 
 log = logging.getLogger(__name__)
 
+
 class StatusController(BaseController):
     def __init__(self):
         self.query = model.meta.Session.query(model.Status)
@@ -23,8 +24,8 @@ class StatusController(BaseController):
         status_q = model.meta.Session.query(model.Status)
         c.paginator = paginate.Page(
             status_q,
-            page = int(request.params.get('page', 1)),
-            items_per_page = 10,
+            page=int(request.params.get('page', 1)),
+            items_per_page=10,
         )
 
         return render('/derived/status/list.html')
@@ -47,10 +48,10 @@ class StatusController(BaseController):
         status = self.query.get(int(id))
         self.me = status
 
-        self.frequency_q  = model.meta.Session.query(
-                        "count", "time"
-                    ).from_statement(
-                        """SELECT
+        self.frequency_q = model.meta.Session.query(
+            "count", "time"
+        ).from_statement(
+            """SELECT
                                 COUNT(*),
                                 date_trunc('hour', time) AS time
                                 FROM node_status_log
@@ -61,8 +62,8 @@ class StatusController(BaseController):
                                 GROUP BY
                                     date_trunc('hour', time)
                         """
-                    ).params(
-                        status_id=status.id,
-                        start=start_date,
-                        end=end_date)
+        ).params(
+            status_id=status.id,
+            start=start_date,
+            end=end_date)
         return self.build_frequency(period)

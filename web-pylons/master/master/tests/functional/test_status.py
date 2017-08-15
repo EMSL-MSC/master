@@ -1,5 +1,6 @@
 from master.tests import *
 
+
 class TestStatusController(TestController):
 
     def test_index(self):

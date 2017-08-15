@@ -7,7 +7,7 @@
         grid: {
                 hoverable: true,
               },
-        xaxis: { 
+        xaxis: {
                 mode: "time",
                 minTickSize: [1, "day"]
                 },
@@ -55,7 +55,7 @@
                     var y = item.datapoint[1].toFixed(0);
                     container = $("#placeholder");
                     showTooltip(item.pageX, item.pageY-20,
-                        item.series.label + ": " + y 
+                        item.series.label + ": " + y
                         + ', ' + x.toDateString());
                 }
             }
@@ -101,14 +101,14 @@
             var date_pickers = $("input.datepicker");
             for (var i = 0; i < date_pickers.length; i++) {
                 if (date_pickers[i].value != '') {
-                    url_extras += "/" + date_pickers[i].name + "/" 
+                    url_extras += "/" + date_pickers[i].name + "/"
                         + date_pickers[i].value;
                 }
             }
             return url_extras;
         }
         function fetch_data(object_id, url_extra) {
-            $.ajax({ 
+            $.ajax({
                 url:
                 "${h.url(controller=unicode(request.urlvars['controller']),action=u'rate')}/" + object_id + url_extra,
                 method: 'GET',
@@ -136,7 +136,7 @@
             $("#HidePlaceholder").show();
             if (!object_labels[object_id]) {
                 $.ajax({ url: "${h.url(
-                            controller=unicode(request.urlvars['controller']), 
+                            controller=unicode(request.urlvars['controller']),
                             action=u'fetch_name'
                         ) }/" + object_id,
                     method: 'GET',
@@ -164,7 +164,7 @@
                     placeholder.hide();
                     $("#HidePlaceholder").hide();
                     $("#tooltip").hide();
-                }    
+                }
             }
         }
         function handleDateUpdate() {
