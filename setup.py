@@ -104,11 +104,11 @@ setup(name='master', version='0.11',
 
       scripts=thescripts,
       data_files=[('/etc/', ['misc/mcp.conf', 'misc/mcp-priv.conf',
-                             'misc/mcp-bin-dirs.sh']), ('/usr/share/master/', ['server/master.sql'])],
+                             'misc/mcp-bin-dirs.sh']), ('/usr/share/master/', ['server/master.sql', 'server/master-data.sql'])],
       #requires=['python (>=2.4)','hostlist','postgresql-python'],
       cmdclass={
           'install_scripts': local_install_scripts,
-        		'build_scripts': local_build_scripts,
-        		'bdist_rpm': local_bdist_rpm
+          'build_scripts': local_build_scripts,
+          'bdist_rpm': local_bdist_rpm
       }
       )
