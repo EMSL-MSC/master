@@ -13,6 +13,7 @@ import master.lib.helpers as helpers
 
 log = logging.getLogger(__name__)
 
+
 class EventController(BaseController):
     def __init__(self):
         self.query = model.meta.Session.query(model.Event)
@@ -44,9 +45,9 @@ class EventController(BaseController):
                                                               end_date)
         self.me = self.query.get(int(id))
         self.frequency_q = model.meta.Session.query(
-                "count", "time"
-            ).from_statement(
-                """SELECT
+            "count", "time"
+        ).from_statement(
+            """SELECT
                         COUNT(*),
                         date_trunc('hour', time) AS time
                         FROM node_event_log
@@ -57,9 +58,9 @@ class EventController(BaseController):
                         GROUP BY
                             time
                 """
-                ).params(
-                    eventid=self.me.id,
-                    start=start_date,
-                    end=end_date
-                )
+        ).params(
+            eventid=self.me.id,
+            start=start_date,
+            end=end_date
+        )
         return self.build_frequency(period)

@@ -1,5 +1,6 @@
 from master.tests import *
 
+
 class TestNodeController(TestController):
 
     def test_index(self):

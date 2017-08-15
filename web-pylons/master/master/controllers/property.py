@@ -7,10 +7,11 @@ from master.lib.base import BaseController, render
 
 log = logging.getLogger(__name__)
 
+
 class PropertyController(BaseController):
 
     def index(self):
         # Return a rendered template
-        #return render('/property.mako')
+        # return render('/property.mako')
         # or, return a response
         return 'Hello World'

@@ -13,6 +13,7 @@ import datetime
 
 log = logging.getLogger(__name__)
 
+
 class MasterxmlrpcController(XMLRPCController):
 
     def addNode(self, name):
@@ -24,7 +25,7 @@ class MasterxmlrpcController(XMLRPCController):
         meta.Session.add(model.Node(name))
         meta.Session.commit()
         return True
-    addNode.signature = [ ['bool', 'string'] ]
+    addNode.signature = [['bool', 'string']]
 
     def getNodes(self, filter=False):
         """getNodes(filter=False) -> ['node1','node2',...,'nodeN']
@@ -38,7 +39,7 @@ class MasterxmlrpcController(XMLRPCController):
         return [node.name for node in node_q]
     getNodes.signature = [["array"], ["array", "string"]]
 
-    def addStatus(self, name, desc = ''):
+    def addStatus(self, name, desc=''):
         """addStatus(name,desc = '') -> Boolean
 
         Create a new status type, with name and descripition.
@@ -48,7 +49,6 @@ class MasterxmlrpcController(XMLRPCController):
         meta.Session.commit()
         return True
     addStatus.signature = [["bool", "string"], ["bool", "string", "string"]]
-
 
     def getStatus(self, names=False):
         """getStatus(names=False) -> {'name':'Description',...}
@@ -61,7 +61,7 @@ class MasterxmlrpcController(XMLRPCController):
             status_q = status_q.filter(model.Status.name.in_(names))
         return dict([(status.name, status.description) for status in
                      status_q])
-    getStatus.signature = [["struct"],["struct", "array"]]
+    getStatus.signature = [["struct"], ["struct", "array"]]
 
     def addEvent(self, name, description=''):
         """addEvent(name, description = '') -> Boolean
@@ -73,7 +73,7 @@ class MasterxmlrpcController(XMLRPCController):
         meta.Session.commit()
         return True
     addEvent.signature = [["bool", "string"],
-                                ["bool", "string", "string"]]
+                          ["bool", "string", "string"]]
 
     def getEvent(self, names=False):
         """getEvent(names=False) -> {'name': 'Description',...}
@@ -88,7 +88,7 @@ class MasterxmlrpcController(XMLRPCController):
                      event_q])
     getEvent.signature = [["struct"], ["struct", "array"]]
 
-    def addProperty(self, name, desc = ''):
+    def addProperty(self, name, desc=''):
         """addProperty(name,desc = '') -> Boolean
 
         Create a new property type, with name and descripition.
@@ -112,7 +112,7 @@ class MasterxmlrpcController(XMLRPCController):
                      property_q])
     getProperties.signature = [["struct"], ["struct", "array"]]
 
-    def addUser(self, name,fullname):
+    def addUser(self, name, fullname):
         """addUser(name,fullname) -> Boolean
 
         Add a user in the database.
@@ -144,11 +144,11 @@ class MasterxmlrpcController(XMLRPCController):
         Returns True on success, xmlrpclib.Fault on Error
         """
         node_q = meta.Session.query(
-                model.Node).filter(model.Node.name.in_(nodes))
+            model.Node).filter(model.Node.name.in_(nodes))
         user_q = meta.Session.query(
-                    model.Users).filter(model.Users.username == user)[0]
+            model.Users).filter(model.Users.username == user)[0]
         status_q = meta.Session.query(
-                    model.Status).filter(model.Status.name == status)[0]
+            model.Status).filter(model.Status.name == status)[0]
         if time:
             the_time = datetime.datetime.fromtimestamp(time)
         else:
@@ -156,8 +156,8 @@ class MasterxmlrpcController(XMLRPCController):
 
         for node in node_q:
             node_status_log = model.NodeStatusLog(node=node, status=status_q,
-                                                 comment=comment, user=user_q,
-                                                 time=the_time)
+                                                  comment=comment, user=user_q,
+                                                  time=the_time)
             meta.Session.add(node_status_log)
 
         meta.Session.commit()
@@ -189,8 +189,8 @@ class MasterxmlrpcController(XMLRPCController):
             )
         return retval
     getNodeStatus.signature = [
-            ["struct"],
-            ["struct", "array"],
+        ["struct"],
+        ["struct", "array"],
     ]
 
     def getStatusHistory(self, nodes, filter=False, startTime='',
@@ -206,16 +206,16 @@ class MasterxmlrpcController(XMLRPCController):
         Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
         """
         node_status_log_q = meta.Session.query(
-                                model.NodeStatusLog
-                            ).join(
-                                model.Node
-                            ).join(
-                                model.Users
-                            ).join(
-                                model.Status
-                            ).filter(
-                                model.Node.name.in_(nodes)
-                            )
+            model.NodeStatusLog
+        ).join(
+            model.Node
+        ).join(
+            model.Users
+        ).join(
+            model.Status
+        ).filter(
+            model.Node.name.in_(nodes)
+        )
         if startTime:
             node_status_log_q = node_status_log_q.filter(
                 model.NodeStatusLog.time >=
@@ -230,21 +230,20 @@ class MasterxmlrpcController(XMLRPCController):
                 model.Status.name == filter)
         retval = {}
         for status_log in node_status_log_q:
-            retval.setdefault(status_log.node.name,[]).append(
+            retval.setdefault(status_log.node.name, []).append(
                 (status_log.status.name,
                  time.mktime(status_log.time.timetuple()),
                  status_log.user.username, status_log.comment)
             )
         return retval
     getStatusHistory.signature = [
-                    ["struct", "array"],
-                    ["struct", "array", "bool"],
-                    ["struct", "array", "string"],
-                    ["struct", "array", "bool", "int"],
-                    ["struct", "array", "string", "int"],
-                    ["struct", "array", "bool", "int", "int"],
-                    ["struct", "array", "string", "int", "int"]]
-
+        ["struct", "array"],
+        ["struct", "array", "bool"],
+        ["struct", "array", "string"],
+        ["struct", "array", "bool", "int"],
+        ["struct", "array", "string", "int"],
+        ["struct", "array", "bool", "int", "int"],
+        ["struct", "array", "string", "int", "int"]]
 
     def storeNodeEvent(self, nodes, event, user, comment="", time=""):
         """storeNodeEvent(nodes, event, user, comment, time) -> Boolean
@@ -269,7 +268,7 @@ class MasterxmlrpcController(XMLRPCController):
         ["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
 
     def getNodeEventHistory(self, nodes, status=False,
-                                startTime='', endTime=''):
+                            startTime='', endTime=''):
         """getNodeEventHistory(nodes, filter=False, startTime='-infinity', endTime='infinity') -> {'node1': [('eventName,timestamp,comment),...],'node2':...}
 
         Retrieve an ordered list of node events in a given time period for a
@@ -284,15 +283,15 @@ class MasterxmlrpcController(XMLRPCController):
         integer representing a POSIX timestamp.
         """
         history_q = meta.Session.query(model.NodeEventLog
-                                ).join(
-                                    model.Node,
-                                ).join(
-                                    model.Event,
-                                ).join(
-                                    model.Users
-                                ).filter(
-                                    model.Node.name.in_(nodes)
-                                )
+                                       ).join(
+            model.Node,
+        ).join(
+            model.Event,
+        ).join(
+            model.Users
+        ).filter(
+            model.Node.name.in_(nodes)
+        )
         if status:
             history_q = history_q.filter(model.Event.name == status)
         if startTime:
@@ -311,12 +310,12 @@ class MasterxmlrpcController(XMLRPCController):
                  event_log.comment))
         return retval
     getNodeEventHistory.signature = [
-                    ["struct", "array"],
-                    ["struct", "array", "string"],
-                    ["struct", "array", "string", "int"],
-                    ["struct", "array", "string", "int", "int"]]
+        ["struct", "array"],
+        ["struct", "array", "string"],
+        ["struct", "array", "string", "int"],
+        ["struct", "array", "string", "int", "int"]]
 
-    def updateNodeProperty(self, node,property,propertyValue,comment="",time=""):
+    def updateNodeProperty(self, node, property, propertyValue, comment="", time=""):
         """updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
 
         Update a property value of a list of nodes.
@@ -340,7 +339,8 @@ class MasterxmlrpcController(XMLRPCController):
     updateNodeProperty.signature = [
         ["dateTime.iso8601", "string", "string", "string"],
         ["dateTime.iso8601", "string", "string", "string", "string"],
-        ["dateTime.iso8601", "string", "string", "string", "string", "dateTime.iso8601"]
+        ["dateTime.iso8601", "string", "string",
+            "string", "string", "dateTime.iso8601"]
     ]
 
     def getNodeProperties(self, nodes, filter=False):
@@ -352,13 +352,13 @@ class MasterxmlrpcController(XMLRPCController):
         Timestamps are a POSIX timestamp
         """
         property_q = meta.Session.query(model.NodeProperties
-                                       ).join(
-                                           model.Node
-                                       ).join(
-                                           model.Property
-                                       ).filter(
-                                           model.Node.name.in_(nodes)
-                                       )
+                                        ).join(
+            model.Node
+        ).join(
+            model.Property
+        ).filter(
+            model.Node.name.in_(nodes)
+        )
         if filter:
             if type(filter) == list:
                 property_q = property_q.filter(
@@ -376,9 +376,9 @@ class MasterxmlrpcController(XMLRPCController):
         return retval
 
     getNodeProperties.signature = [
-            ["struct", "array"],
-            ["struct", "array", "string"],
-            ["struct", "array", "array"]]
+        ["struct", "array"],
+        ["struct", "array", "string"],
+        ["struct", "array", "array"]]
 
     def getNodePropertyHistory(self, nodes, filter=False,
                                startTime='', endTime=''):
@@ -392,13 +392,13 @@ class MasterxmlrpcController(XMLRPCController):
         Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
         """
         history_q = meta.Session.query(model.NodePropertyLog
-                                        ).join(
-                                          model.Node
-                                        ).join(
-                                            model.Property
-                                        ).filter(
-                                            model.Node.name.in_(nodes)
-                                        )
+                                       ).join(
+            model.Node
+        ).join(
+            model.Property
+        ).filter(
+            model.Node.name.in_(nodes)
+        )
         if filter:
             history_q = history_q.filter(model.Property.name.in_(filter))
         if startTime:
@@ -423,8 +423,7 @@ class MasterxmlrpcController(XMLRPCController):
         ["struct", "array", "array", "int"],
         ["struct", "array", "array", "int", "int"]]
 
-
-    def getNodesFilter(self,filt):
+    def getNodesFilter(self, filt):
         """getNodesFilter(filt) -> list
 
         The following keyword arguments take a string or list of strings
@@ -452,13 +451,13 @@ class MasterxmlrpcController(XMLRPCController):
         if any([test in filt for test in
                 ['status', 'statuslike', 'user', 'userlike']]):
             node_q = node_q.join(model.NodeStatusLog
-                                ).join(model.Status
-                                ).join(model.Users)
+                                 ).join(model.Status
+                                        ).join(model.Users)
         if any([test in filt for test in
                 ['property', 'propertylike', 'propvalue', 'propvaluelike']]):
             node_q = node_q.join(model.NodePropertyLog
-                                ).join(model.Property
-                                ).join(model.Users)
+                                 ).join(model.Property
+                                        ).join(model.Users)
 
         if 'status' in filt:
             if type(filt['status']) == list:
@@ -476,7 +475,8 @@ class MasterxmlrpcController(XMLRPCController):
 
         if 'property' in filt:
             if type(filt['property']) == list:
-                node_q = node_q.filter(model.Property.name.in_(filt['property']))
+                node_q = node_q.filter(
+                    model.Property.name.in_(filt['property']))
             else:
                 node_q = node_q.filter(model.Property.name == filt['property'])
 
@@ -518,7 +518,7 @@ class MasterxmlrpcController(XMLRPCController):
         for node in node_q:
             retval.append(node.name)
         return retval
-    getNodesFilter.signature = [ ["struct","struct"] ]
+    getNodesFilter.signature = [["struct", "struct"]]
 
     def serverTime(self):
         """serverTime -> float
@@ -526,6 +526,6 @@ class MasterxmlrpcController(XMLRPCController):
         returns the current time of the server as a POSIX timestamp
         """
         date = meta.Session.query('now'
-                                 ).from_statement('SELECT NOW()').first()
+                                  ).from_statement('SELECT NOW()').first()
         return int(time.mktime(date[0].timetuple()))
     serverTime.signature = [["int"]]

@@ -7,6 +7,7 @@ refer to the routes manual at http://routes.groovie.org/docs/
 from pylons import config
 from routes import Mapper
 
+
 def make_map(config):
     """Create, configure and return the routes Mapper"""
     map = Mapper(directory=config['pylons.paths']['controllers'],
@@ -34,11 +35,15 @@ def make_map(config):
     map.connect(None, '/{controller}/{action}/{id}/start_date/{start_date}')
     map.connect(None,
                 '/{controller}/{action}/{id}/start_date/{start_date}/filter/{filter}')
-    map.connect(None, '/{controller}/{action}/{id}/start_date/{start_date}/end_date/{end_date}')
-    map.connect(None, '/{controller}/{action}/{id}/period/{period}/start_date/{start_date}')
-    map.connect(None, '/{controller}/{action}/{id}/period/{period}/start_date/{start_date}/end_date/{end_date}')
+    map.connect(
+        None, '/{controller}/{action}/{id}/start_date/{start_date}/end_date/{end_date}')
+    map.connect(
+        None, '/{controller}/{action}/{id}/period/{period}/start_date/{start_date}')
+    map.connect(
+        None, '/{controller}/{action}/{id}/period/{period}/start_date/{start_date}/end_date/{end_date}')
     map.connect(None, '/{controller}/{action}/what/{what}/how_many/{how_many}')
-    map.connect(None, '/{controller}/{action}/what/{what}/how_many/{how_many}/period/{period}')
+    map.connect(
+        None, '/{controller}/{action}/what/{what}/how_many/{how_many}/period/{period}')
 
     map.redirect('/*(url)/', '/{url}', _redirect_code='301 Moved Permanently')
 
