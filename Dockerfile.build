@@ -1,7 +1,7 @@
 FROM centos:7
 MAINTAINER evan.felix@pnl.gov
 
-RUN yum install -y python rpm-build hostparser python-twisted-core python-twisted-names python-twisted-web postgresql-python pexpect
+RUN yum install -y python rpm-build python-hostlist python-twisted-core python-twisted-names python-twisted-web postgresql-python pexpect
 
 COPY . /app
 

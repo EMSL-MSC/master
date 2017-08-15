@@ -10,58 +10,6 @@ from distutils.command.install_scripts import install_scripts
 from distutils.command.build_scripts import build_scripts
 from distutils.command.bdist_rpm import bdist_rpm
 
-def committed_rev():
-	try:
-		import pysvn,os,sys
-		client = pysvn.Client()
-		revs = []
-		for root, dirs, files in os.walk(sys.path[0]):
-			if '.svn' in dirs:
-				dirs.remove('.svn')
-
-			for f in files:
-				try:
-					entry = client.info(os.path.join(root,f))
-
-					if not entry or entry.commit_revision.kind !=  pysvn.opt_revision_kind.number:
-						raise Exception("Entry not in subversion.")
-					revs.append(entry.commit_revision.number)
-				except:
-					pass
-		return max(revs)
-	except Exception, msg:
-		try:
-			import _version
-
-			return int(_version.revision)
-		except:
-			print "Unable to read _version."
-			pass
-		print msg,
-		print '-- aborting search for subversion repository revision number'
-		return 0
-
-class svnDistribution(Distribution):
-	def __init__(self, attrs):
-		build_num = committed_rev()
-		if build_num:
-			attrs['revision'] = '%i'% build_num
-			attrs['version'] = '%s_r%s'% (attrs['version'],attrs['revision'])
-			try:
-				filename, format = attrs['version_file']
-				file(filename, 'w').write(format% (build_num,attrs['version']))
-			except KeyError:
-				pass
-		try:
-			del attrs['version_file']
-		except KeyError:
-			pass
-		try:
-			del attrs['revision']
-		except KeyError:
-			pass
-		Distribution.__init__(self, attrs)
-
 
 class local_install_scripts(install_scripts):
 
@@ -141,7 +89,7 @@ mcp_bin_dirs = open('misc/mcp-bin-dirs.sh', 'w')
 mcp_bin_dirs.write('#!/bin/sh\nexport MASTER_BIN_DIR=%s\nexport MASTER_SBIN_DIR=%s\n' % (binDir, sbinDir))
 mcp_bin_dirs.close()
 
-setup(name='master', version='0.10',
+setup(name='master', version='0.11',
 	author="Evan Felix",
 	author_email="e@pnl.gov",
 	description="An asset managment system, designed to watch the cluster and also manage its state",
@@ -152,7 +100,7 @@ setup(name='master', version='0.10',
 
 	scripts = thescripts,
 	data_files = [('/etc/',['misc/mcp.conf','misc/mcp-priv.conf','misc/mcp-bin-dirs.sh']),('/usr/share/master/',['server/master.sql'])],
-	#requires=['python (>=2.4)','hostparser','postgresql-python','python-ply'],
+	#requires=['python (>=2.4)','hostlist','postgresql-python'],
 	cmdclass = {
 		'install_scripts': local_install_scripts,
 		'build_scripts': local_build_scripts,
