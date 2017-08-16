@@ -10,6 +10,7 @@ from routes.middleware import RoutesMiddleware
 
 from master.config.environment import load_environment
 
+
 def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
     """Create a Pylons WSGI application and return it
 

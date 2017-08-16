@@ -1,2 +1,5 @@
 include misc/mcp.conf
 include misc/mcp-priv.conf
+include server/master.sql
+include server/master-data.sql
+include misc/mcp-bin-dirs.sh

@@ -15,6 +15,7 @@ from sqlalchemy import func as s_func
 
 log = logging.getLogger(__name__)
 
+
 class NodeController(BaseController):
     def index(self):
         self.list()
@@ -46,8 +47,8 @@ class NodeController(BaseController):
         nodes = model.meta.Session.query(model.Node)
         c.paginator = paginate.Page(
             nodes,
-            page = int(request.params.get('page', 1)),
-            items_per_page = 50
+            page=int(request.params.get('page', 1)),
+            items_per_page=50
         )
         return render('/derived/node/list.html')
 
@@ -62,40 +63,40 @@ class NodeController(BaseController):
             model.Node.name.like(unicode(request.POST['q']))).all()
         if len(nodes) == 1:
             return redirect(url(controller=u'node', action=u'name',
-                                 id=nodes[0].name))
+                                id=nodes[0].name))
         else:
             c.paginator = paginate.Page(
                 nodes,
-                page = int(request.params.get('page', 1)),
-                items_per_page = 50
+                page=int(request.params.get('page', 1)),
+                items_per_page=50
             )
             return render('/derived/node/list.html')
 
     def _build_history_query(self, id, history_table, name_table, entries=10,
-                 start_time=None, end_time=None, exclude_job_related = False):
+                             start_time=None, end_time=None, exclude_job_related=False):
         history_q = meta.Session.query(
-                                    history_table
-                                ).join(
-                                    model.Node,
-                                ).join(
-                                    name_table,
-                                ).join(
-                                    model.Users
-                                ).filter(
-                                    model.Node.id == id
-                                )
+            history_table
+        ).join(
+            model.Node,
+        ).join(
+            name_table,
+        ).join(
+            model.Users
+        ).filter(
+            model.Node.id == id
+        )
         if start_time:
             history_q = history_q.filter(
                 history_table.time >= datetime.datetime.strptime(
-                                                start_time, '%Y-%m-%d'))
+                    start_time, '%Y-%m-%d'))
         if end_time:
             history_q = history_q.filter(
                 history_table.time <= datetime.datetime.strptime(
-                                            end_time, '%Y-%m-%d'))
+                    end_time, '%Y-%m-%d'))
 
         if exclude_job_related:
             history_q = history_q.filter("comment not like 'Starting%'"
-                ).filter("comment not like 'Completing%'")
+                                         ).filter("comment not like 'Completing%'")
 
         history_q = history_q.order_by(history_table.time.desc())
 
@@ -106,13 +107,13 @@ class NodeController(BaseController):
     def _get_status_history(self, id, entries=10, start_time=None,
                             end_time=None, exclude_job_related=False):
         node_status_log_q = self._build_history_query(
-                                    id,
-                                    model.NodeStatusLog,
-                                    model.Status,
-                                    entries,
-                                    start_time,
-                                    end_time,
-                                    exclude_job_related)
+            id,
+            model.NodeStatusLog,
+            model.Status,
+            entries,
+            start_time,
+            end_time,
+            exclude_job_related)
         retval = []
         for status_log in node_status_log_q:
             retval.append({'name': status_log.node.name,
@@ -158,7 +159,7 @@ class NodeController(BaseController):
         # dimm.3.part_number = 72T512220EP3SC2
         # to hashes of the form
         # {
-        #   'data': 'dimm', 
+        #   'data': 'dimm',
         #   'children': [
         #       {
         #           'data': '3',
@@ -213,20 +214,20 @@ class NodeController(BaseController):
 
         start_date = datetime.date.today() - datetime.timedelta(int(period))
         status_q = meta.Session.query(
-                        model.Node.name, s_func.count(model.Node.name)
-                    ).join(
-                        model.NodeStatusLog
-                    ).join(
-                        model.Status
-                    ).filter(
-                        model.Status.name == what
-                    ).filter(
-                        model.NodeStatusLog.time >= start_date
-                    ).group_by(
-                        model.Node.name
-                    ).order_by(
-                        s_func.count(model.Node.name).desc()
-                    ).limit(how_many)
+            model.Node.name, s_func.count(model.Node.name)
+        ).join(
+            model.NodeStatusLog
+        ).join(
+            model.Status
+        ).filter(
+            model.Status.name == what
+        ).filter(
+            model.NodeStatusLog.time >= start_date
+        ).group_by(
+            model.Node.name
+        ).order_by(
+            s_func.count(model.Node.name).desc()
+        ).limit(how_many)
         result = []
         for row in status_q:
             result.append([row[0], row[1]])

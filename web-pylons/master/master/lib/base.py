@@ -13,6 +13,7 @@ import time
 
 log = logging.getLogger(__name__)
 
+
 class BaseController(WSGIController):
 
     def __call__(self, environ, start_response):
@@ -35,16 +36,16 @@ class BaseController(WSGIController):
         rows = self.frequency_q.all()
         for event_instance in rows:
             period_bucket = time.mktime(event_instance.time.timetuple()) \
-                    - (time.mktime(event_instance.time.timetuple()) \
-                       % (int(period)*3600))
+                - (time.mktime(event_instance.time.timetuple())
+                   % (int(period) * 3600))
             events_per_period[period_bucket] = events_per_period.get(
-                                                    period_bucket, 0) + event_instance.count
+                period_bucket, 0) + event_instance.count
         periods = events_per_period.keys()
         periods.sort()
         frequency_dataset = []
         index = 0
         for period_bucket in periods:
             index += 1
-            frequency_dataset.append((int(period_bucket)*1000,
+            frequency_dataset.append((int(period_bucket) * 1000,
                                       events_per_period[period_bucket]))
-        return {u"label": unicode(self.me.name), u"data": frequency_dataset }
+        return {u"label": unicode(self.me.name), u"data": frequency_dataset}

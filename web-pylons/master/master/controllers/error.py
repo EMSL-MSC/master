@@ -6,6 +6,7 @@ from webhelpers.html.builder import literal
 
 from master.lib.base import BaseController
 
+
 class ErrorController(BaseController):
     """Generates error documents as and when they are required.
 
@@ -16,14 +17,17 @@ class ErrorController(BaseController):
     ErrorDocuments middleware in your config/middleware.py file.
 
     """
+
     def document(self):
         """Render the error document"""
         request = self._py_object.request
         resp = request.environ.get('pylons.original_response')
-        content = literal(resp.body) or cgi.escape(request.GET.get('message', ''))
+        content = literal(resp.body) or cgi.escape(
+            request.GET.get('message', ''))
         page = error_document_template % \
             dict(prefix=request.environ.get('SCRIPT_NAME', ''),
-                 code=cgi.escape(request.GET.get('code', str(resp.status_int))),
+                 code=cgi.escape(request.GET.get(
+                     'code', str(resp.status_int))),
                  message=content)
         return page
 

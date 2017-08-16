@@ -1,5 +1,6 @@
 from master.tests import *
 
+
 class TestXmlrpcController(TestController):
 
     def test_get_nodes(self):

@@ -23,7 +23,7 @@ setup(
     include_package_data=True,
     test_suite='nose.collector',
     package_data={'master': ['i18n/*/LC_MESSAGES/*.mo']},
-    #message_extractors={'master': [
+    # message_extractors={'master': [
     #        ('**.py', 'python', None),
     #        ('templates/**.mako', 'mako', {'input_encoding': 'utf-8'}),
     #        ('public/**', 'ignore', None)]},
@@ -36,7 +36,7 @@ setup(
     [paste.app_install]
     main = pylons.util:PylonsInstaller
     """,
-    extras_require = {
+    extras_require={
         'PostgreSQL': ['psycopg2'],
     }
 )
