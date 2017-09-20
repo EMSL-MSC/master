@@ -1,0 +1,11 @@
+FROM ubuntu:16.04
+MAINTAINER evan.felix@pnl.gov
+
+RUN apt-get update
+#RUN apt-get install -y python python-hostlist python-twisted-core python-twisted-names python-twisted-web postgresql-python pexpect
+RUN apt-get install -y python python-twisted-core python-twisted-names python-twisted-web python-pexpect python-stdeb
+RUN apt-get install -y dh-python
+
+COPY . /app
+
+CMD cd /app && python setup.py  --command-packages=stdeb.command bdist_deb && cp deb_dist/*.deb dist

@@ -5,3 +5,6 @@
 *.pyc
 .vagrant
 misc/mcp-bin-dirs.sh
+MANIFEST
+build
+

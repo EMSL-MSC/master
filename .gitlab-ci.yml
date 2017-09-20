@@ -21,3 +21,14 @@ centos6-build:
     expire_in: 1 week
   tags:
     - docker
+
+ubuntu1604-build:
+  script:
+    - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
+    - docker run -v `pwd`:/app/dist master-ubuntu-build
+  artifacts:
+    paths:
+      - ./*.deb
+    expire_in: 1 week
+  tags:
+    - docker
