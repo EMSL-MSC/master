@@ -1,3 +1,8 @@
+services:
+  - karcaw/dind
+
+variables:
+  DOCKER_HOST: "tcp://localhost:2375"
 
 centos7-build:
   script:
