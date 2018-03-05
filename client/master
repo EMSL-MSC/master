@@ -105,6 +105,7 @@ master - general MASTER project control program
 
 	-n <comment>      Add a Note about a system
     -e <event>        Add an event for a system
+	-u <username>     Add a user to the master database
 """
 
 import master
