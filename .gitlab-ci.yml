@@ -11,6 +11,7 @@ variables:
   TILLER_NAMESPACE: "gitlab"
 
 centos7-build:
+  stage: build
   script:
     - docker build -t master-build7 . -f Dockerfile.build
     - docker run -v `pwd`:/app/dist master-build7
@@ -22,6 +23,7 @@ centos7-build:
     - docker
 
 centos6-build:
+  stage: build
   script:
     - sed -i -e s/centos:7/centos:6/ Dockerfile.build
     - docker build -t master-build6 . -f Dockerfile.build
@@ -34,6 +36,7 @@ centos6-build:
     - docker
 
 ubuntu1604-build:
+  stage: build
   script:
     - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
     - docker run -v `pwd`:/app/dist master-ubuntu-build
@@ -43,7 +46,6 @@ ubuntu1604-build:
     expire_in: 1 week
   tags:
     - docker
-
 
 deploy-centos7-k8s:
   stage: deploy
