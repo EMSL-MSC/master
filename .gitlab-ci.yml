@@ -50,9 +50,11 @@ ubuntu1604-build:
 deploy-centos7-k8s:
   stage: deploy
   dependencies:
-    - centos7-build 
+    - centos7-build
   only:
     - master
+  tags:
+    - k8s
   script:
     - helm init --client-only
     - helm repo add repo  https://repo.emsl.pnl.gov/charts/
@@ -64,5 +66,7 @@ delete-centos7-k8s:
   when: manual
   only:
     - master
+  tags:
+    - k8s
   script:
     - helm del --purge $CI_PROJECT_NAME
