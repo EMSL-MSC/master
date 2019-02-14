@@ -10,6 +10,21 @@ variables:
   DOCKER_HOST: "tcp://localhost:2375"
   TILLER_NAMESPACE: "gitlab"
 
+
+docker-image:
+  stage: deploy
+  tags:
+    - docker
+    - k8s
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/$CI_JOB_NAME . -f Dockerfile
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/$CI_JOB_NAME
+  after_script:
+    - docker logout $CI_REGISTRY
+  only:
+    - master
+
 centos7-build:
   stage: build
   script:
