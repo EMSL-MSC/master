@@ -9,7 +9,7 @@ RUN pip install python-hostlist
 
 COPY . /app
 
-RUN cd /app && python setup.py install
+RUN cd /app && python setup.py install --root=/
 
 
 CMD master
