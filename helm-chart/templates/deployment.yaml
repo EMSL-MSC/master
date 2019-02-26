@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "master-server.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "master-server.name" . }}
+    helm.sh/chart: {{ include "master-server.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "master-server.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "master-server.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      volumes:
+      - configMap:
+          name: {{ include "master-server.fullname" . }}
+        name: mcp-priv
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/sbin/mcp
+            - -d
+          ports:
+            - name: mcp
+              containerPort: 627
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /etc/mcp-priv.conf
+              name: mcp-priv
+              subPath: mcp-priv.conf
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

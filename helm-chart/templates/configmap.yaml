@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "master-server.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "master-server.name" . }}
+    helm.sh/chart: {{ include "master-server.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  mcp-priv.conf: |
+    database_server="{{ .Values.database.server }}"
+    database_name="{{ .Values.database.name }}"
+    database_user="{{ .Values.database.user }}"
+    database_password="{{ .Values.database.password }}"
