@@ -7,7 +7,7 @@ import pgdb
 import time
 import datetime
 
-server_url = 'http://127.0.0.1:627';
+server_url = 'http://127.0.0.1:627'
 server = xmlrpclib.Server(server_url)
 
 

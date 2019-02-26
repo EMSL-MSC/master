@@ -3,7 +3,7 @@
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
 # All rights reserved.
-# 
+#
 # 1.	Battelle Memorial Institute (hereinafter Battelle) hereby grants permission
 # 	to any person or entity lawfully obtaining a copy of this software and
 # 	associated documentation files (hereinafter “the Software”) to redistribute
@@ -11,25 +11,25 @@
 # 	modification.  Such person or entity may use, copy, modify, merge, publish,
 # 	distribute, sublicense, and/or sell copies of the Software, and may permit
 # 	others to do so, subject to the following conditions:
-# 
+#
 # 	•	Redistributions of source code must retain the above copyright
-# 		notice, this list of conditions and the following disclaimers. 
+# 		notice, this list of conditions and the following disclaimers.
 # 	•	Redistributions in binary form must reproduce the above copyright
 # 		notice, this list of conditions and the following disclaimer in the
 # 		documentation and/or other materials provided with the distribution.
 # 	•	Other than as used herein, neither the name Battelle Memorial
 # 		Institute or Battelle may be used in any form whatsoever without the
-# 		express written consent of Battelle.  
+# 		express written consent of Battelle.
 # 	•	Redistributions of the software in any form, and publications based
 # 		on work performed using the software should include the following
 # 		citation as a reference:
-# 
+#
 # 			(A portion of) The research was performed using EMSL, a
 # 			national scientific user facility sponsored by the
 # 			Department of Energy's Office of Biological and
 # 			Environmental Research and located at Pacific Northwest
 # 			National Laboratory.
-# 
+#
 # 2.	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -40,7 +40,7 @@
 # 	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # 	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # 	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 # 3.	The Software was produced by Battelle under Contract No. DE-AC05-76RL01830
 # 	with the Department of Energy.  The U.S. Government is granted for itself
 # 	and others acting on its behalf a nonexclusive, paid-up, irrevocable
@@ -52,12 +52,21 @@
 # 	makes any warranty, express or implied, or assumes any legal liability or
 # 	responsibility for the accuracy, completeness or usefulness of any data,
 # 	apparatus, product or process disclosed, or represents that its use would
-# 	not infringe privately owned rights.  
-# 
+# 	not infringe privately owned rights.
+#
 """ Sark-SMA - the properties Gatherer for HP SMA's
 """
 
-usage="""
+import socket
+import getopt
+import sys
+import xmlrpclib
+import os
+import master.sma
+import master
+
+
+usage = """
 sark-sma - MASTER SMA property gathering
 
 	Use: sark-sma [-c <config file>] [-m <xmlrpcurl>] [ -s <server> ] [ -a <sma>,<sma>,...] [-v] [-d]
@@ -71,13 +80,6 @@ sark-sma - MASTER SMA property gathering
 	-d                Debug Mode - Only gather properties and output them, Show debug messages
 """
 
-import master
-import master.sma
-import os
-import xmlrpclib
-import sys
-import getopt
-import socket
 
 # Procedure:
 #  Parse command line
@@ -88,35 +90,36 @@ import socket
 #  download mcp properties for short hostname
 #  update any changes
 #    if property name does not exist add it to the database
-#  
+#
 #
 #  Exit
-def main():
-	
-	#defaults
-	smas=[]
-	server=None
-	verbose=None
-	server_user=None
-	serverurl=""
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:s:u:a:m:vdh")
+def main():
+
+	# defaults
+	smas = []
+	server = None
+	verbose = None
+	server_user = None
+	serverurl = ""
+
+	optlist, args = getopt.getopt(sys.argv[1:], "c:s:u:a:m:vdh")
 
 	if args:
-		print "Extra Arguments Given:" +args
+		print "Extra Arguments Given:" + args
 		return
 
-	for (arg,val) in optlist:
+	for (arg, val) in optlist:
 		if arg == "-c":
-			master.config["config_file"]=val
+			master.config["config_file"] = val
 		if arg == "-a":
 			smas += val.split(",")
 		if arg == "-s":
-			server = val;
+			server = val
 		if arg == "-u":
-			server_user = val;
+			server_user = val
 		if arg == "-m":
-			serverurl=val
+			serverurl = val
 		if arg == "-v":
 			verbose = True
 		if arg == "-d":
@@ -124,82 +127,84 @@ def main():
 		if arg == "-h":
 			print usage
 			return
-	
+
 	master.load_config()
 	master.load_privileged_config()
-	
+
 	if serverurl:
-		master.config["server_url"]=serverurl
+		master.config["server_url"] = serverurl
 
 	if server_user:
-		master.config["sma_server_username"]	
+		master.config["sma_server_username"]
 
 	if smas:
-		master.config["sma_list"]=smas
+		master.config["sma_list"] = smas
 
 	if server:
-		master.config["sma_server"]=server
-		
-	props={}
-	
+		master.config["sma_server"] = server
+
+	props = {}
+
 	mcp = xmlrpclib.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
 
 	hsvs = master.sma.get_hsv_info(
-        master.config["sma_server"], master.config["sma_list"],
-        master.config["sma_server_username"], master.config["sma_username"],
-        master.config["sma_password"])
+            master.config["sma_server"], master.config["sma_list"],
+            master.config["sma_server_username"], master.config["sma_username"],
+            master.config["sma_password"])
 
 	for hsv in hsvs:
 		props = hsvs[hsv]
-		if verbose: print "Processing:",hsv
+		if verbose:
+			print "Processing:", hsv
 
-		#check to see if node exists:
+		# check to see if node exists:
 		nodes = mcp.master.getNodes([hsv])
 		if len(nodes) == 0:
-			print "hsv node:",hsv,"does not exist in database"
+			print "hsv node:", hsv, "does not exist in database"
 			continue
-
 
 		sprops = mcp.master.getNodeProperties([hsv])
 		if sprops.has_key(hsv):
 			current = sprops[hsv]
 		else:
-			if verbose: print "hsv node:",hsv,"no  properties found"
+			if verbose:
+				print "hsv node:", hsv, "no  properties found"
 			current = []
 
 		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
-		for k,v,ts,cmt in current:
+		for k, v, ts, cmt in current:
 			if props.has_key(k) and props[k] == v:
-				master.debug("deleting key <"+k+"> because it is already on the server")
+				master.debug("deleting key <" + k +
+				             "> because it is already on the server")
 				del(props[k])
 
 		# Everything that is left needs to updated on the server
-		for k,v in props.items():
+		for k, v in props.items():
 			try:
-				if verbose: print "Adding",k," => ",v
-				
-				res = mcp.master.updateNodeProperty(hsv,k,v)
-				master.debug("updateNodeProperty: res = "+`res`)
-			except xmlrpclib.Fault,msg:
-				master.debug("Adding key <"+k+"> to db because:"+str(msg))
-				
+				if verbose:
+					print "Adding", k, " => ", v
+
+				res = mcp.master.updateNodeProperty(hsv, k, v)
+				master.debug("updateNodeProperty: res = " + `res`)
+			except xmlrpclib.Fault, msg:
+				master.debug("Adding key <" + k + "> to db because:" + str(msg))
+
 				try:
-					res = mcp.master.addProperty(k,"Added by Sark on "+myname)
-					master.debug("addProperty: res="+`res`)
+					res = mcp.master.addProperty(k, "Added by Sark on " + myname)
+					master.debug("addProperty: res=" + `res`)
 				except xmlrpclib.Fault:
 					print >>sys.stderr, "Error adding New property"
 					continue  # just move on
-				
-				try:
-					res = mcp.master.updateNodeProperty(hsv,k,v)
-					pass
-				except xmlrpclib.Fault,msg:
-					print >>sys.stderr,"Error adding "+k+" => "+v+": "+str(msg)
 
-			except Exception,msg: #Will this ever happen
-				master.debug("Error updating property:"+k+":"+str(msg))
-				
+				try:
+					res = mcp.master.updateNodeProperty(hsv, k, v)
+					pass
+				except xmlrpclib.Fault, msg:
+					print >>sys.stderr, "Error adding " + k + " => " + v + ": " + str(msg)
+
+			except Exception, msg:  # Will this ever happen
+				master.debug("Error updating property:" + k + ":" + str(msg))
 
 
 if __name__ == "__main__":
@@ -207,5 +212,3 @@ if __name__ == "__main__":
 		main()
 	except KeyboardInterrupt:
 		pass
-
-

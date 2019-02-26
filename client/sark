@@ -54,11 +54,18 @@
 # 	apparatus, product or process disclosed, or represents that its use would
 # 	not infringe privately owned rights.
 #
-
 """ Sark - the properties Gatherer
 """
+import socket
+import master.gather
+import getopt
+import sys
+import xmlrpclib
+import os
+import master
 
-usage="""
+
+usage = """
 sark - MASTER initial bootup property gathering
 
 	Use: sark [-c <config file>] [-m <xmlrpcurl>] [ -t <net,ib,disk,system> ] [-v] [-d]
@@ -70,13 +77,6 @@ sark - MASTER initial bootup property gathering
 	-d                Debug Mode - Only gather properties and output them, Show debug messages
 """
 
-import master
-import os
-import xmlrpclib
-import sys
-import getopt
-import master.gather
-import socket
 
 # Procedure:
 #  Parse command line
@@ -90,26 +90,27 @@ import socket
 #
 #
 #  Exit
+
 def main():
 
-	#defaults
-	types=[]
-	verbose=None
-	serverurl=""
+	# defaults
+	types = []
+	verbose = None
+	serverurl = ""
 
-	optlist,args = getopt.getopt(sys.argv[1:],"c:t:m:vdh")
+	optlist, args = getopt.getopt(sys.argv[1:], "c:t:m:vdh")
 
 	if args:
-		print "Extra Arguments Given:" +args
+		print "Extra Arguments Given:" + args
 		return
 
-	for (arg,val) in optlist:
+	for (arg, val) in optlist:
 		if arg == "-c":
-			master.config["config_file"]=val
+			master.config["config_file"] = val
 		if arg == "-t":
 			types += val.split(",")
 		if arg == "-m":
-			serverurl=val
+			serverurl = val
 		if arg == "-v":
 			verbose = True
 		if arg == "-d":
@@ -121,20 +122,20 @@ def main():
 	master.load_config()
 
 	if serverurl:
-		master.config["server_url"]=serverurl
+		master.config["server_url"] = serverurl
 
 	if types:
-		master.config["sark_modules"]=types
+		master.config["sark_modules"] = types
 
-	props={}
+	props = {}
 
 	master.debug(str(master.gather.verbs))
 	for mod in master.config["sark_modules"]:
 		try:
-			master.debug("Processing <"+mod+"> verb")
+			master.debug("Processing <" + mod + "> verb")
 			props.update(master.gather.verbs[mod]())
 		except KeyError:
-			master.debug("Error processing <"+mod+"> verb")
+			master.debug("Error processing <" + mod + "> verb")
 
 	mcp = xmlrpclib.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
@@ -145,36 +146,36 @@ def main():
 	else:
 		current = []
 
-	for k,v,ts,cmt in current:
+	for k, v, ts, cmt in current:
 		if props.has_key(k) and props[k] == v:
-			master.debug("deleting key <"+k+"> because it is already on the server")
+			master.debug("deleting key <" + k + "> because it is already on the server")
 			del(props[k])
 
 	# Everything that is left needs to updated on the server
-	for k,v in props.items():
+	for k, v in props.items():
 		try:
-			if verbose: print "Adding",k," => ",v
+			if verbose:
+				print "Adding", k, " => ", v
 
-			res = mcp.master.updateNodeProperty(myname,k,v)
-			master.debug("updateNodeProperty: res = "+`res`)
-		except xmlrpclib.Fault,msg:
-			master.debug("Adding key <"+k+"> to db because:"+str(msg))
+			res = mcp.master.updateNodeProperty(myname, k, v)
+			master.debug("updateNodeProperty: res = " + `res`)
+		except xmlrpclib.Fault, msg:
+			master.debug("Adding key <" + k + "> to db because:" + str(msg))
 
 			try:
-				res = mcp.master.addProperty(k,"Added by Sark on "+myname)
-				master.debug("addProperty: res="+`res`)
+				res = mcp.master.addProperty(k, "Added by Sark on " + myname)
+				master.debug("addProperty: res=" + `res`)
 			except xmlrpclib.Fault:
 				print >>sys.stderr, "Error adding New property"
 				continue  # just move on
 
 			try:
-				res = mcp.master.updateNodeProperty(myname,k,v)
-			except xmlrpclib.Fault,msg:
-				print >>sys.stderr,"Error adding "+k+" => "+v+": "+str(msg)
+				res = mcp.master.updateNodeProperty(myname, k, v)
+			except xmlrpclib.Fault, msg:
+				print >>sys.stderr, "Error adding " + k + " => " + v + ": " + str(msg)
 
-		except Exception,msg: #Will this ever happen
-			master.debug("Error updating property:"+k+":"+str(msg))
-
+		except Exception, msg:  # Will this ever happen
+			master.debug("Error updating property:" + k + ":" + str(msg))
 
 
 if __name__ == "__main__":

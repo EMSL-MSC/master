@@ -56,67 +56,22 @@
 # 	apparatus, product or process disclosed, or represents that its use would
 # 	not infringe privately owned rights.
 #
-
+"""
+nadmin - tool for updating node states for the cluster
 """
 
-This file is part of the MASTER project, which is goverened by the following License
+from hostlist import *
+import time
+import sys
+import socket
+import getopt
+import xmlrpclib
+import os
+import master.cluster_interface
+import master
 
-Copyright © 2007,2008,2009,2010 Battelle Memorial Institute
-All rights reserved.
 
-1.	Battelle Memorial Institute (hereinafter Battelle) hereby grants permission
-	to any person or entity lawfully obtaining a copy of this software and
-	associated documentation files (hereinafter “the Software”) to redistribute
-	and use the Software in source and binary forms, with or without
-	modification.  Such person or entity may use, copy, modify, merge, publish,
-	distribute, sublicense, and/or sell copies of the Software, and may permit
-	others to do so, subject to the following conditions:
-
-	•	Redistributions of source code must retain the above copyright
-		notice, this list of conditions and the following disclaimers.
-	•	Redistributions in binary form must reproduce the above copyright
-		notice, this list of conditions and the following disclaimer in the
-		documentation and/or other materials provided with the distribution.
-	•	Other than as used herein, neither the name Battelle Memorial
-		Institute or Battelle may be used in any form whatsoever without the
-		express written consent of Battelle.
-	•	Redistributions of the software in any form, and publications based
-		on work performed using the software should include the following
-		citation as a reference:
-
-			(A portion of) The research was performed using EMSL, a
-			national scientific user facility sponsored by the
-			Department of Energy's Office of Biological and
-			Environmental Research and located at Pacific Northwest
-			National Laboratory.
-
-2.	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-	ARE DISCLAIMED. IN NO EVENT SHALL BATTELLE OR CONTRIBUTORS BE LIABLE FOR ANY
-	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-	(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-3.	The Software was produced by Battelle under Contract No. DE-AC05-76RL01830
-	with the Department of Energy.  The U.S. Government is granted for itself
-	and others acting on its behalf a nonexclusive, paid-up, irrevocable
-	worldwide license in this data to reproduce, prepare derivative works,
-	distribute copies to the public, perform publicly and display publicly, and
-	to permit others to do so.  The specific term of the license can be
-	identified by inquiry made to Battelle or DOE.  Neither the United States
-	nor the United States Department of Energy, nor any of their employees,
-	makes any warranty, express or implied, or assumes any legal liability or
-	responsibility for the accuracy, completeness or usefulness of any data,
-	apparatus, product or process disclosed, or represents that its use would
-	not infringe privately owned rights.
-
-"""
-
-usage="""
+usage = """
 nadmin - Node administration utility.
 
     Use: nadmin [--config <config file>] [-m <xmlrpcurl>] [-d] <action options>
@@ -132,22 +87,15 @@ nadmin - Node administration utility.
     -h             Display this message.
 """
 
-import master
-import master.cluster_interface
-import os
-import xmlrpclib
-import getopt
-import socket
-import sys
-import time
-from hostlist import *
 
-DEBUG=False
+DEBUG = False
+
 
 def main():
     global DEBUG
     try:
-        (options, argsleft) = getopt.getopt(sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
+        (options, argsleft) = getopt.getopt(
+            sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
     except getopt.GetoptError:
         print usage
         sys.exit(1)
@@ -161,9 +109,9 @@ def main():
         DEBUG = True
 
     if '-l' in args or '--history' in args:
-        HISTORY=True
+        HISTORY = True
     else:
-        HISTORY=False
+        HISTORY = False
 
     try:
         mcp = setup_mcp(args)
@@ -171,7 +119,8 @@ def main():
         print "Error connecting to the mcp."
         sys.exit(2)
 
-    clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(master.config['cluster_command_args'])
+    clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(
+        master.config['cluster_command_args'])
 
     if '-r' in args:
         comment = args['-r']
@@ -236,7 +185,6 @@ def main():
         sys.exit(1)
 
 
-
 def setup_mcp(args):
     if '--config' in args:
         master.config['config_file'] = args['--config']
@@ -247,19 +195,22 @@ def setup_mcp(args):
     master.load_config()
     return xmlrpclib.Server(master.config['server_url'])
 
+
 def get_maint_nodes(mcp):
-    return mcp.master.getNodesFilter({'status':'maint'}) + mcp.master.getNodesFilter({'status': 'dead'})
+    return mcp.master.getNodesFilter({'status': 'maint'}) + mcp.master.getNodesFilter({'status': 'dead'})
+
 
 def check_available_for_work(nodelist, clusterCommands):
 	# Horrible no good ugly hack
     nlist = []
     for node in nodelist:
         if node.startswith('cu') and node[3] == 'n':
-            node = "%s0%s"% (node[0:2], node[2:])
+            node = "%s0%s" % (node[0:2], node[2:])
         nlist.append(node)
     nodestate = clusterCommands.check_nodes_in_use(nlist)
     hsvnodes = [node for node in nodelist if node.startswith('hsv')]
     return [node for (node, val) in nodestate.iteritems() if not val] + hsvnodes
+
 
 def print_maint_nodes(mcp, nodelist, history=False):
     nodelist = expand_hostlist(','.join(nodelist))
@@ -267,32 +218,38 @@ def print_maint_nodes(mcp, nodelist, history=False):
     node_statuses = {}
     for (node, status_list) in node_status_history.iteritems():
         first_index = 0
-        status_list = [item for item in status_list if item[3] != '' or (item[3] == '' and item[0] == 'ok')]
-        status_list.sort(cmp=lambda x,y: cmp(y[1],x[1]))
+        status_list = [item for item in status_list if item[3]
+                       != '' or (item[3] == '' and item[0] == 'ok')]
+        status_list.sort(cmp=lambda x, y: cmp(y[1], x[1]))
         for item in status_list:
             if item[0] == 'ok':
                 first_index = status_list.index(item) + 1
                 break
 	if first_index != 0:
-		node_statuses[node] = status_list[:first_index-1]
+		node_statuses[node] = status_list[:first_index - 1]
 	else:
 		node_statuses[node] = status_list
     for node in nodelist:
         details = node_statuses[node]
         if history:
-            status_str = "NodeName=%-12s:"% node
+            status_str = "NodeName=%-12s:" % node
             for item in details:
-                status_str += "\n\tStatus=%-7s Reason=%s When=%s"% ( item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
+                status_str += "\n\tStatus=%-7s Reason=%s When=%s" % (
+                    item[0], item[3], time.strftime('%c', time.localtime(float(item[1]))),)
         else:
             try:
-                status_str = "NodeName=%-12s Status=%-7s Reason=%s"% (node, details[0][0], details[0][3])
+                status_str = "NodeName=%-12s Status=%-7s Reason=%s" % (
+                    node, details[0][0], details[0][3])
             except IndexError, e:
-                status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."'% (node,)
+                status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."' % (
+                    node,)
 
         print status_str
 
+
 def parse_nodelist(nodestr):
     return expand_hostlist(nodestr)
+
 
 def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
     result = clusterCommands.mark_nodes_for_maint(comment, nodelist)
@@ -304,6 +261,7 @@ def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
     except xmlrpclib.ProtocolError, e:
         if DEBUG:
             print "Error setting master status"
+
 
 def make_nodes_available(mcp, nodelist, comment, clusterCommands):
     result = clusterCommands.mark_nodes_available(nodelist, comment)
@@ -329,10 +287,12 @@ def set_status(mcp, status, nodelist, comment):
         mcp.master.addUser(user.pw_name, full_name)
     mcp.master.updateStatus(nodelist, status, user.pw_name, comment)
 
+
 def get_current_user():
     import pwd
     import os
     return os.getenv('SUDO_USER', pwd.getpwuid(os.getuid())[0])
+
 
 if __name__ == "__main__":
     main()

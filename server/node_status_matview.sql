@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW node_status AS
  SELECT distinct on(nsl.node_id) nsl.id, nsl.node_id, nsl.status_id, nsl."time" AS last_change, nsl.comment, nsl.user_id
-   FROM 
-    node_status_log nsl, 
+   FROM
+    node_status_log nsl,
     ( SELECT node_status_log.node_id, max(node_status_log."time") AS "time" FROM node_status_log GROUP BY node_status_log.node_id) mr
   WHERE nsl.node_id = mr.node_id AND nsl."time" = mr."time";
 

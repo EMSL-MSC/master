@@ -1,12 +1,16 @@
+repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  sha: v2.1.0
+  rev: v2.1.0
   hooks:
   - id: trailing-whitespace
     exclude: web-pylons/master/master/public/js/*
   - id: end-of-file-fixer
   - id: check-yaml
     exclude: ^helm-chart/templates/
-  - id: autopep8-wrapper
   - id: check-docstring-first
   - id: check-added-large-files
   - id: debug-statements
+- repo: https://github.com/pre-commit/mirrors-autopep8
+  rev: v1.4.3
+  hooks:
+  - id: autopep8

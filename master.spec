@@ -38,7 +38,7 @@ UNKNOWN
 %{__python} setup.py build
 
 %install
-%{__python} setup.py install -O1 --install-lib=%{python_sitelib} --root=%{buildroot} 
+%{__python} setup.py install -O1 --install-lib=%{python_sitelib} --root=%{buildroot}
 
 
 %clean
