@@ -17,7 +17,7 @@ service:
   port: 627
 
 database:
-  server: jenny
+  server: master-database.emsl.pnl.gov
   name: master
   user: master
   password: setoneplease
