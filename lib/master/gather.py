@@ -65,11 +65,11 @@ FIXMES:
 import os
 import re
 import time
-from master import debug, dell, amcc, hp, mem, config
+from master import debug, dell, amcc, hp, mem, nvidia, config
 from master.util import *
 
 
-verbs = {}
+verbs = {"gpu": nvidia.getAllGPUInfo}
 
 
 class FileMissingException(Exception):
@@ -180,8 +180,8 @@ def getScsiInfo(scsi_id):
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 debug("Failed to find a device for <" +
-		       scsi_id + "> MAP:" + `_getSGdevice.sg_map`)
+		 debug("Failed to find a device for <"
+		       + scsi_id + "> MAP:" + `_getSGdevice.sg_map`)
 		 return {}
 	prefix = "scsi." + scsi_id
 	p = os.popen("/usr/bin/sg_inq " + dev, "r")
