@@ -257,18 +257,48 @@ def getDMIInfo():
 	info = {}
 	lines = os.popen('/usr/sbin/dmidecode').read()
 	lines = lines.split('\n')
-	category_map = {"0x0000": {'name': "bios", 'keywords': ['Vendor', 'Version', 'Release Date']},
-                 "0x0001": {'name': "system", 'keywords': ["Manufacturer", 'Product Name', 'Version', 'Serial Number', 'UUID']},
-                 "0x0002": {'name': "chassis",
-                            'keywords': [
-                                "Manufacturer", 'Type', 'Lock',
-                                'Version', 'Serial Number', 'Asset Tag',
-                                'Height', 'Number Of Power Cords'
-                            ]}}
+	category_map = {"0": {'name': "bios", 'keywords': ['Vendor', 'Version', 'Release Date']},
+                 "1": {'name': "system", 'keywords': ["Manufacturer", 'Product Name', 'Version', 'Serial Number', 'UUID']},
+                 "2": {'name': "chassis",
+                       'keywords': [
+                           "Manufacturer", 'Type', 'Lock',
+                           'Version', 'Serial Number', 'Asset Tag',
+                           'Height', 'Number Of Power Cords'
+                       ]
+                       },
+                 "17": {'name': 'dimm',
+                        'ident': "Locator",
+                        'keywords': [
+                            "Locator", "Serial Number", "Part Number",
+                            "Size", "Manufacturer"
+                        ]
+                        }
+                 }
 	current_category = ''
+	keys = {}
 	for line in lines:
 		if line.startswith('Handle'):
-			current_category = re.search("([x0-9A-F]+)", line).group()
+			# dump the collected keys
+			if keys:
+				for key, val in keys.iteritems():
+					if category_map[current_category].has_key('ident'):
+						if keys[category_map[current_category]['ident']]:
+							name_str = category_map[current_category]['name'] + \
+                                                            '.' + keys[category_map[current_category]['ident']] + \
+                                                            '.' + \
+                                                           	key.replace(
+                                                           		' ', '_').lower()
+						else:
+							name_str = ''  # dont set a key for things without a locator
+					else:
+						name_str = category_map[current_category]['name'] + \
+							'.' + key.replace(' ', '_').lower()
+					if name_str:
+						info[name_str] = val
+				keys = {}
+
+			current_category = re.search("DMI type ([0-9]+),", line).group(1)
+			#print current_category
 			if not category_map.has_key(current_category):
 				current_category = ''
 				continue
@@ -276,10 +306,7 @@ def getDMIInfo():
 			test_line = line.strip()
 			for key_word in category_map[current_category]['keywords']:
 				if test_line.startswith(key_word):
-					name_str = category_map[current_category]['name'] + \
-						'.' + test_line.split(':')[0].replace(' ', '_').lower()
-					value = test_line.split(':')[1]
-					info[name_str] = value.strip()
+					keys[test_line.split(':')[0]] = test_line.split(':')[1].strip()
 
 	return info
 
