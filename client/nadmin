@@ -81,10 +81,19 @@ nadmin - Node administration utility.
         -o    Remove Nodes From Use.
         -c    Check for nodes to be worked on.
 
-    -w <NodeList>        A list of nodes to perform the action on.
+    -w <NodeList>       A list of nodes to perform the action on.
     -r <comment>        A comment for the action.
-    -l    --history    Display output in long format showing history.
-    -h             Display this message.
+    -l    --history     Display output in long format showing history.
+    -h                  Display this message.
+
+    Alternative Slurm Formatted Options:
+        Options can alternatively be passed in a slurm format. They must occur
+        at the end of the option list after the update command.
+        
+        NodeName=                       A list of nodes to perform the action on.
+        Reason=                         A comment for the action.
+        State=Down or State=Drain       Remove Nodes From Use.
+        State=Idle or State=Resume      Return Nodes to Use.
 """
 
 
@@ -112,6 +121,28 @@ def main():
         HISTORY = True
     else:
         HISTORY = False
+
+    # Slurm compatibility options
+    if argsleft[0].lower() == "update":
+        for arg in argsleft[1:]:
+            if arg.lower().startswith("nodename=") or arg.lower().startswith("node="):
+                args['-w'] =  arg[arg.find("=")+1:]
+            elif arg.lower().startswith("reason="):
+                args['-r'] =  arg[arg.find("=")+1:]
+            elif arg.lower().startswith("state="):
+                state = arg[arg.find("=")+1:].lower()
+                if state in ("resume", "idle"):
+                    args['-i'] = ''
+                elif state in("down", "drain"):
+                    args['-o'] = ''
+                else:
+                    print "Unkown state passed: %s" % state
+                    print usage
+                    sys.exit(1)
+            else:
+                print "extra option passed: %s" % arg
+                print usage
+                sys.exit(1)
 
     try:
         mcp = setup_mcp(args)
