@@ -157,17 +157,21 @@ class SlurmCommands(ClusterCommands):
 		return nodestatus
 
 	def mark_nodes_for_maint(self, comment, nodelist):
+		comment = comment.replace('"', '\\"')
+		nodelist = ' '.join(nodelist).replace('"', '\\"')
 		cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"' % (
                     self.scontrol_bin,
-                    ' '.join(nodelist),
-                				comment)
+                    nodelist,
+                    comment)
 		cmd_result = os.system(cmd)
 		return cmd_result
 
 	def mark_nodes_available(self, nodelist, comment=''):
+		comment = comment.replace('"', '\\"')
+		nodelist = ' '.join(nodelist).replace('"', '\\"')
 		cmd = '%s update NodeName="%s" State="RESUME"' % (
                     self.scontrol_bin,
-                    ' '.join(nodelist))
+                    nodelist)
 		if comment != '':
 			cmd += ' Reason="%s"' % (comment,)
 		return os.system(cmd)
