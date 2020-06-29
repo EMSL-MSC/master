@@ -123,7 +123,7 @@ def main():
         HISTORY = False
 
     # Slurm compatibility options
-    if argsleft[0].lower() == "update":
+    if len(argsleft) > 0 and argsleft[0].lower() == "update":
         for arg in argsleft[1:]:
             if arg.lower().startswith("nodename=") or arg.lower().startswith("node="):
                 args['-w'] =  arg[arg.find("=")+1:]
