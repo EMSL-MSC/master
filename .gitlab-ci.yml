@@ -10,7 +10,6 @@ variables:
   DOCKER_HOST: "tcp://localhost:2375"
   TILLER_NAMESPACE: "gitlab"
 
-
 docker-image:
   stage: deploy
   tags:
@@ -25,7 +24,7 @@ docker-image:
   only:
     - master
 
-centos7-build:
+build-centos7:
   stage: build
   script:
     - docker build -t master-build7 . -f Dockerfile.build
@@ -37,20 +36,7 @@ centos7-build:
   tags:
     - docker
 
-centos6-build:
-  stage: build
-  script:
-    - sed -i -e s/centos:7/centos:6/ Dockerfile.build
-    - docker build -t master-build6 . -f Dockerfile.build
-    - docker run -v `pwd`:/app/dist master-build6
-  artifacts:
-    paths:
-      - ./*.rpm
-    expire_in: 1 week
-  tags:
-    - docker
-
-ubuntu1604-build:
+build-ubuntu1804:
   stage: build
   script:
     - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
@@ -62,26 +48,4 @@ ubuntu1604-build:
   tags:
     - docker
 
-deploy-centos7-k8s:
-  stage: deploy
-  dependencies:
-    - centos7-build
-  only:
-    - master
-  tags:
-    - k8s
-  script:
-    - helm init --client-only
-    - helm repo add repo  https://repo.emsl.pnl.gov/charts/
-    - helm del --purge $CI_PROJECT_NAME || true
-    - helm install -n $CI_PROJECT_NAME --set projectid=$CI_PROJECT_ID,pipelineid=$CI_PIPELINE_ID repo/artifact-repo
-
-delete-centos7-k8s:
-  stage: extra
-  when: manual
-  only:
-    - master
-  tags:
-    - k8s
-  script:
-    - helm del --purge $CI_PROJECT_NAME
+include: https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy.yml
