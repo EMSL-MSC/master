@@ -79,14 +79,14 @@ def getSSVDicts(fileobj):
 
     headers = line.split(";")
 
-    return [(dict(zip(headers, line.split(";")))) for line in fileobj if len(line) > 1]
+    return [(dict(list(zip(headers, line.split(";"))))) for line in fileobj if len(line) > 1]
 
 
 def _test():
-    import StringIO
-    out = getSSVDicts(StringIO.StringIO(testformat))
+    import io
+    out = getSSVDicts(io.StringIO(testformat))
     for i in out:
-        print i
+        print(i)
 
 
 if __name__ == "__main__":

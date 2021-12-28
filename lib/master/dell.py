@@ -56,7 +56,7 @@
 #
 """A library to use omreport to gather properties from the DELL PERC Cards."""
 
-import ssv
+from . import ssv
 import os
 from master.util import *
 
@@ -111,10 +111,10 @@ def getAllPERCInfo():
 
 def _test():
 	d = getAllPERCInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

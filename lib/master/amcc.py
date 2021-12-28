@@ -115,7 +115,7 @@ All rights reserved.
 
 """
 
-import ssv
+from . import ssv
 import os
 import re
 from master.util import *
@@ -188,10 +188,10 @@ def getAllAMCCInfo():
 
 def _test():
 	d = getAllAMCCInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

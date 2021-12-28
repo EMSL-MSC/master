@@ -1,9 +1,9 @@
-import SimpleXMLRPCServer
+import xmlrpc.server
 import sys
 import master
 
 
-class MasterServerRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
+class MasterServerRequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
 	def report_error(self, code, message):
 		self.send_response(code)
 		response = 'Client Not Authorized'
@@ -18,30 +18,30 @@ class MasterServerRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
 	def do_POST(self):
 		try:
 			if self.authFunction() == True:
-				SimpleXMLRPCServer.SimpleXMLRPCRequestHandler.do_POST(self)
+				xmlrpc.server.SimpleXMLRPCRequestHandler.do_POST(self)
 			else:
 				self.report_error(403, "Client Not Authorized")
-		except NameError, e:
+		except NameError as e:
 			self.report_error(500, "Auth function Not Specified" + str(e))
 
 
-class MasterXMLRPCServer(SimpleXMLRPCServer.SimpleXMLRPCServer):
+class MasterXMLRPCServer(xmlrpc.server.SimpleXMLRPCServer):
 	functions = []
 
 	def __init__(self, addr, authFunction):
 		MasterServerRequestHandler.authFunction = authFunction
-		SimpleXMLRPCServer.SimpleXMLRPCServer.__init__(
+		xmlrpc.server.SimpleXMLRPCServer.__init__(
 			self, addr, MasterServerRequestHandler, 0)
 
 	def serve_forever(self):
 		for i in self.functions:
 			self.register_function(i, "master.%s" % i.__name__)
 		self.register_introspection_functions()
-		SimpleXMLRPCServer.SimpleXMLRPCServer.serve_forever(self)
+		xmlrpc.server.SimpleXMLRPCServer.serve_forever(self)
 
 	def _dispatch(self, method, params):
 		try:
-			return SimpleXMLRPCServer.SimpleXMLRPCServer._dispatch(self, method, params)
+			return xmlrpc.server.SimpleXMLRPCServer._dispatch(self, method, params)
 		except:
 			import traceback
 			etype, value, tb = sys.exc_info()

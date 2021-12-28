@@ -210,7 +210,7 @@ def getCurrentStatus(nodes):
 		for i in curs.fetchall():
 			retDict[i[0]] = i[1:]
 		return retDict
-	except pgdb.DatabaseError, e:
+	except pgdb.DatabaseError as e:
 		connection.rollback()
 		raise
 
@@ -241,7 +241,7 @@ def getStatusHistory(nodes, filter=False, startTime='-infinity', endTime='infini
 			except KeyError:
 				retDict[i[0]] = [i[1:]]
 		return retDict
-	except pgdb.DatabaseError, e:
+	except pgdb.DatabaseError as e:
 		connection.rollback()
 		raise
 
@@ -298,7 +298,7 @@ def getCurrentProperties(nodes, filter=False):
 			except KeyError:
 				retVal[i[0]] = [i[1:]]
 		return retVal
-	except pgdb.DatabaseError, e:
+	except pgdb.DatabaseError as e:
 		connection.rollback()
 		raise
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import xmlrpclib
+import xmlrpc.client
 import errno
 import exceptions
 import pgdb
@@ -8,7 +8,7 @@ import time
 import datetime
 
 server_url = 'http://127.0.0.1:627'
-server = xmlrpclib.Server(server_url)
+server = xmlrpc.client.Server(server_url)
 
 
 def wipeDatabase(user, database):
@@ -25,29 +25,29 @@ def try_call(function, args, result):
 	retval = None
 	try:
 		retval = function(*args)
-	except xmlrpclib.ProtocolError, inst:
-		print "ProtocolError: - %s" % inst
-	except xmlrpclib.ResponseError, inst:
-		print "ResponseError: - %s" % inst
-	except xmlrpclib.Fault, inst:
-		print "Fault: - %s" % inst
-		retval = xmlrpclib.Fault
-	except Exception, inst:
-		print "Unexpected error: %s" % inst
+	except xmlrpc.client.ProtocolError as inst:
+		print("ProtocolError: - %s" % inst)
+	except xmlrpc.client.ResponseError as inst:
+		print("ResponseError: - %s" % inst)
+	except xmlrpc.client.Fault as inst:
+		print("Fault: - %s" % inst)
+		retval = xmlrpc.client.Fault
+	except Exception as inst:
+		print("Unexpected error: %s" % inst)
 		raise
 
 	str = "%s(%s)" % (function._Method__name, args)
 	spcs = 100 - len(str)
-	print str, " " * spcs,
+	print(str, " " * spcs, end=' ')
 	if retval == result:
-		print "Success: %s" % `retval`
+		print("Success: %s" % repr(retval))
 	elif type(retval) == type({}) and type(result) == type({}):
-		if result.keys() == retval.keys():
-			print "Success"
+		if list(result.keys()) == list(retval.keys()):
+			print("Success")
 		else:
-			print "Dictionary Failure", result, retval
+			print("Dictionary Failure", result, retval)
 	else:
-		print "Error retval == %s" % `retval`
+		print("Error retval == %s" % repr(retval))
 
 	return retval
 
@@ -63,7 +63,7 @@ try_call(server.master.addProperty, [
          "LogicalThinking", "Something that happens to Evan once a day"], True)
 try_call(server.master.addUser, ["AbooDaba", "Yoda"], True)
 try_call(server.master.updateStatus, [
-         ["n0"], "bad", "AbooDaba", "this job sucks", "10 years from now"], xmlrpclib.Fault)
+         ["n0"], "bad", "AbooDaba", "this job sucks", "10 years from now"], xmlrpc.client.Fault)
 try_call(server.master.updateStatus, [
          ["n0"], "bad", "AbooDaba", "life is cruel for a tester"], True)
 try_call(server.master.updateStatus, [["n0"], "bad", "AbooDaba"], True)
@@ -81,7 +81,7 @@ try_call(server.master.getStatusHistory, [
 try_call(server.master.updateNodeProperty, [
          ["n0"], "LogicalThinking", "-1"], True)
 try_call(server.master.updateNodeProperty, [
-         ["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"], xmlrpclib.Fault)
+         ["n0"], "LogicalThinking", "-1", "<insert evil laugh here>", "-1"], xmlrpc.client.Fault)
 try_call(server.master.getNodeProperties, [["n0", "n0"]], {'n0': 0})
 try_call(server.master.getNodeProperties, [
          ["n0"], ["LogicalThinking"]], {'n0': 0})

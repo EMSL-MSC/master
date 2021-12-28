@@ -107,22 +107,22 @@ class ClusterCommands(object):
 
 class DebugCommands(ClusterCommands):
     def __init__(self, *args):
-        print "DebugCommands(%s)" % (args,)
+        print("DebugCommands(%s)" % (args,))
 
     def get_node_status(self, nodename):
-        print "get_node_status(%s)" % nodename
+        print("get_node_status(%s)" % nodename)
 
     def get_nodes_status(self, nodelist):
-        print "get_nodes_status(%s)" % (nodelist,)
+        print("get_nodes_status(%s)" % (nodelist,))
 
     def check_nodes_in_use(self, nodelist=[]):
-        print "check_nodes_in_use(%s)" % (nodelist,)
+        print("check_nodes_in_use(%s)" % (nodelist,))
 
     def mark_nodes_for_maint(self, comment, nodelist=[]):
-        print "mark_nodes_for_maint(%s, %s)" % (comment, nodelist,)
+        print("mark_nodes_for_maint(%s, %s)" % (comment, nodelist,))
 
     def mark_nodes_available(self, comment, nodelist=[]):
-        print "mark_nodes_available(%s, %s)" % (comment, nodelist,)
+        print("mark_nodes_available(%s, %s)" % (comment, nodelist,))
 
 
 class SlurmCommands(ClusterCommands):
@@ -149,7 +149,7 @@ class SlurmCommands(ClusterCommands):
 			nodestatus = self.parse_slurm_output(child_stdout)
 		else:
 			nodestatus = self.get_nodes_status(nodelist)
-		for (node, state) in nodestatus.iteritems():
+		for (node, state) in nodestatus.items():
 			if state.find('ALLOC') < 0 and (state.find('DRAIN') >= 0 or state.find('DOWN') >= 0):
 				nodestatus[node] = False
 			else:

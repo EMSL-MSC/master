@@ -180,8 +180,8 @@ def getScsiInfo(scsi_id):
 
 	dev = _getSGdevice(scsi_id)
 	if not dev:
-		 debug("Failed to find a device for <"
-		       + scsi_id + "> MAP:" + `_getSGdevice.sg_map`)
+		 debug("Failed to find a device for <" +
+		       scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
 		 return {}
 	prefix = "scsi." + scsi_id
 	p = os.popen("/usr/bin/sg_inq " + dev, "r")
@@ -280,8 +280,8 @@ def getDMIInfo():
 		if line.startswith('Handle'):
 			# dump the collected keys
 			if keys:
-				for key, val in keys.iteritems():
-					if category_map[current_category].has_key('ident'):
+				for key, val in keys.items():
+					if 'ident' in category_map[current_category]:
 						if keys[category_map[current_category]['ident']]:
 							name_str = category_map[current_category]['name'] + \
                                                             '.' + keys[category_map[current_category]['ident']] + \
@@ -298,8 +298,8 @@ def getDMIInfo():
 				keys = {}
 
 			current_category = re.search("DMI type ([0-9]+),", line).group(1)
-			#print current_category
-			if not category_map.has_key(current_category):
+			# print current_category
+			if current_category not in category_map:
 				current_category = ''
 				continue
 		if current_category:
@@ -326,7 +326,8 @@ def getSystemInfo():
 
 	d = {}
 
-	d = dict(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname()))
+	d = dict(
+		list(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname())))
 	del(d['nodename'])
 
 	d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
@@ -375,13 +376,13 @@ def getIntelMICInfo():
 		lines = os.popen(config["micinfo"]).readlines()
 		# find sections
 		devstart = []
-		for i in xrange(len(lines)):
+		for i in range(len(lines)):
 			if lines[i].startswith("Device No:"):
 				devstart.append(i)
 		if devstart:
 			d.update(doLineParse(lines[:devstart[0]], "mic", sysmap))
 		devstart.append(len(lines))
-		for i in xrange(len(devstart) - 1):
+		for i in range(len(devstart) - 1):
 			mic = lines[devstart[i]].split(' ')[-1].rstrip()
 			d.update(doLineParse(lines[devstart[i]:devstart[i + 1]], mic, micmap))
 
@@ -414,7 +415,7 @@ def gatherBMCInfo():
 @verb("all")
 def gatherALL():
 	d = {}
-	for (v, f) in verbs.items():
+	for (v, f) in list(verbs.items()):
 		if v != "all":
 			debug("Running <" + v + "> Verb")
 			d.update(f())
@@ -425,17 +426,17 @@ def _test():
 	global debug, verbs
 
 	def dbg(msg):
-		print "DEBUG:", msg
+		print("DEBUG:", msg)
 	debug = dbg
 
-	print verbs
+	print(verbs)
 
 	d = verbs["all"]()
 
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

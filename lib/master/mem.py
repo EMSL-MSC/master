@@ -86,7 +86,8 @@ def getMemoryInfo():
 		found = foundMemInfo(l)
 
 		if found:
-			memmap["dimm." + bank + "." + found.keys()[0]] = found[found.keys()[0]]
+			memmap["dimm." + bank + "."
+                            + list(found.keys())[0]] = found[list(found.keys())[0]]
 	p.close()
 
 	if not memmap:
@@ -126,10 +127,10 @@ def foundMemInfo(line):
 
 def _test():
 	d = getMemoryInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

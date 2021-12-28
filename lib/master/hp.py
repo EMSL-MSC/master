@@ -108,9 +108,9 @@ def getlines(cmd, proc):
 			data += d
 			if data.rfind("=>") > 0:
 				break
-		except OSError, msg:
+		except OSError as msg:
 			if not msg.errno == errno.EAGAIN:
-				print `msg`
+				print(repr(msg))
 				l = 0
 
 	lines = data.split("\n")
@@ -168,10 +168,10 @@ def getAllSmartArrayInfo():
 
 def _test():
 	d = getAllSmartArrayInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

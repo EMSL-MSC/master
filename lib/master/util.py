@@ -66,8 +66,8 @@ def mapit(dict, map, prefix):
 		pref = prefix + "."
 	else:
 		pref = ''
-	for key in dict.keys():
-		if key in map.keys():
+	for key in list(dict.keys()):
+		if key in list(map.keys()):
 			infos[pref + map[key]] = dict[key]
 
 	return infos

@@ -119,7 +119,7 @@ def debug(msg):
 
 
 def basicdebug(msg):
-	print "DEBUG:" + msg
+	print("DEBUG:" + msg)
 
 
 config = {
@@ -161,8 +161,8 @@ def load_config_file(param):
 
     try:
 		crap = {}
-		exec open(config[param]) in crap, config
-		for (k, v) in config.items():
+		exec(open(config[param]), crap, config)
+		for (k, v) in list(config.items()):
 			debug("Config: " + str(k) + " => " + str(v))
     except IOError:
 		debug("Error Loading Config file: " + config["config_file"])

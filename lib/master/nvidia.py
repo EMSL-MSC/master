@@ -56,7 +56,7 @@
 #
 """A library to use omreport to gather properties from NVidia GPU Cards."""
 
-import ssv
+from . import ssv
 import os
 import re
 from master.util import *
@@ -116,14 +116,14 @@ def _test():
 	global debug
 
 	def dbg(msg):
-		print "DEBUG:", msg
+		print("DEBUG:", msg)
 	debug = dbg
 
 	d = getAllGPUInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

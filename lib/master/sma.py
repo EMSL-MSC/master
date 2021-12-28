@@ -109,12 +109,12 @@ class smamgr:
 		return "<wrapper>" + data + "</wrapper>"
 
 	def gethsvinfo(self):
-		map = {'objectwwn'			: 'wwn',
-                    'firmwareversion'	: 'fwver',
-                    'operationalstate'	: 'state',
+		map = {'objectwwn': 'wwn',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
                     # 'statestring'		:'statestring', #huh?
-                    'totalstoragespace'	: 'totalspace',
-                    'usedstoragespace'	: 'usedspace',
+                    'totalstoragespace': 'totalspace',
+                    'usedstoragespace': 'usedspace',
                     'availablestoragespace': 'availablespace',
                     'operationalstatedetail': 'statedetail'}
 
@@ -123,7 +123,7 @@ class smamgr:
 		e = myelementtree.fromstring(self.runcmdstoxml("ls system full xml"))
 		for o in e.getiterator("object"):
 			d = {}
-			for k, v in map.items():
+			for k, v in list(map.items()):
 				d[v] = o.find(k).text
 
 			d.update(self.getcontrollerinfo(o.findtext("objectname")))
@@ -137,7 +137,7 @@ class smamgr:
 
 	def getvdiskinfo(self, hsvname):
 		map = {'onlinecontroller/controllername': 'onlinecontroller',
-                    'operationalstate'		: 'state',
+                    'operationalstate': 'state',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
@@ -148,17 +148,17 @@ class smamgr:
 			e = o.findtext("familyname")
 			prefix = e + "."
 
-			for k, v in map.items():
+			for k, v in list(map.items()):
 				d[prefix + v] = o.findtext(k)
 
 		return d
 
 	def getdiskshelfinfo(self, hsvname):
-		map = {'operationalstate'		: 'state',
-                    'wwnodename'			: 'wwn',
-                    'looppair'				: 'looppair',
-                    'emu/operationalstate'	: 'emu.state',
-                    'emu/firmwareversion'	: 'emu.fwver',
+		map = {'operationalstate': 'state',
+                    'wwnodename': 'wwn',
+                    'looppair': 'looppair',
+                    'emu/operationalstate': 'emu.state',
+                    'emu/firmwareversion': 'emu.fwver',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
@@ -173,7 +173,7 @@ class smamgr:
 				e = "UnknownDiskShelf_" + o.findtext("wwnodename")
 			prefix = e + "."
 
-			for k, v in map.items():
+			for k, v in list(map.items()):
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("powersupplies/powersupply"):
@@ -194,14 +194,14 @@ class smamgr:
 
 	def getdiskinfo(self, hsvname):
 
-		map = {'nodewwid'			: 'wwid',
-                    'firmwareversion'		: 'fwver',
-                    'operationalstate'		: 'state',
-                    'modelnumber'			: 'model',
-                    'formattedcapacity'	: 'capacity',
-                    'migrationstate'		: 'migrationstate',
-                    'diskbaynumber'			: 'diskbay',
-                    'shelfnumber'			: 'shelfnumber',
+		map = {'nodewwid': 'wwid',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
+                    'modelnumber': 'model',
+                    'formattedcapacity': 'capacity',
+                    'migrationstate': 'migrationstate',
+                    'diskbaynumber': 'diskbay',
+                    'shelfnumber': 'shelfnumber',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
@@ -217,7 +217,7 @@ class smamgr:
 				c = "UnknownDisk_" + o.findtext("nodewwid")
 			prefix = c + "."
 
-			for k, v in map.items():
+			for k, v in list(map.items()):
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("loops/loop"):
@@ -227,11 +227,11 @@ class smamgr:
 
 	def getcontrollerinfo(self, hsvname):
 
-		map = {'serialnumber'			: 'serial',
-                    'firmwareversion'		: 'fwver',
-                    'operationalstate'		: 'state',
-                    'modelnumber'			: 'model',
-                    'controllertemperaturestatus'	: 'tempstatus',
+		map = {'serialnumber': 'serial',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
+                    'modelnumber': 'model',
+                    'controllertemperaturestatus': 'tempstatus',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
@@ -243,7 +243,7 @@ class smamgr:
 			c = c.replace("Controller ", "controller")
 			prefix = c + "."
 
-			for k, v in map.items():
+			for k, v in list(map.items()):
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("fans/fan"):
@@ -280,12 +280,12 @@ if __name__ == "__main__":
 	master.load_config()
 	master.load_privileged_config()
 	if len(sys.argv) != 4:
-		print "Usage: %s <ioserver> <ioserver_user> <sma>" % (sys.argv[0],)
+		print("Usage: %s <ioserver> <ioserver_user> <sma>" % (sys.argv[0],))
 		sys.exit()
 	s = smamgr(sys.argv[1], sys.argv[3], sys.argv[2],
             master.config['sma_username'], master.config['sma_password'])
 
-	for k, v in s.gethsvinfo().items():
-		print k
-		for dk, dv in v.items():
-			print "\t", dk, dv
+	for k, v in list(s.gethsvinfo().items()):
+		print(k)
+		for dk, dv in list(v.items()):
+			print("\t", dk, dv)
