@@ -180,8 +180,8 @@ def getScsiInfo(scsi_id):
 
   dev = _getSGdevice(scsi_id)
   if not dev:
-     debug("Failed to find a device for <" +
-           scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
+     debug("Failed to find a device for <"
+           + scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
      return {}
   prefix = "scsi." + scsi_id
   p = os.popen("/usr/bin/sg_inq " + dev, "r")
@@ -330,8 +330,9 @@ def getSystemInfo():
       list(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname())))
   del(d['nodename'])
 
-  d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
-                       {"MemTotal": "total", "SwapTotal": "swap"}))
+  if os.access("/proc/meminfo", os.F_OK):
+    d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
+                         {"MemTotal": "total", "SwapTotal": "swap"}))
 
   if os.access('/proc/uptime', os.R_OK):
     d['boot_time'] = int(time.mktime(time.localtime()) - float(
@@ -339,6 +340,17 @@ def getSystemInfo():
 
   if os.access('/usr/sbin/dmidecode', os.X_OK):
     d.update(getDMIInfo())
+
+  if d['sysname'] == 'Darwin':
+    sysctl = {i[0]: i[1].lstrip() for i in [j.strip().split(':')
+                                            for j in os.popen("/usr/sbin/sysctl -a").readlines()]}
+    for k, v in {
+        'hw.memsize': 'mem.total',
+        'hw.ncpu': 'cpu.count',
+        'kern.boottime': 'boot_time'
+    }.items():
+      d[v] = sysctl[k]
+      print(k, v)
   return d
 
 
