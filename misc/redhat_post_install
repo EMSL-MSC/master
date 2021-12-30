@@ -1,1 +1,1 @@
-/sbin/chkconfig --add master-sark
+systemctl enable master-sark

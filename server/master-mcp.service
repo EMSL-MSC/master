@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Master Control Program(MCP) as part of the master project
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/mcp
+Type=simple
+PIDFile=/var/run/mcp.pid
+
+[Install]
+WantedBy=multi-user.target

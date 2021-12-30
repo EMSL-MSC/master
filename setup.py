@@ -64,17 +64,17 @@ class local_bdist_rpm(bdist_rpm):
 			self.post_install = 'misc/redhat_post_install'
 		self.fix_python = True
 
-		# little hack to avoid pyc and pyo files
-		filename = tempfile.mkstemp()[1]
-		print(filename)
-		string = '%s setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES\n' % (
-			sys.executable)
-		string += "sed -i -e 's/\(.*\.py$\)/\\1\\n\\1c\\n\\1o/' INSTALLED_FILES\n"
-		o = open(filename, 'w')
-		o.write(string)
-		o.close()
-		self.install_script = filename
-		# end hack
+		# # little hack to avoid pyc and pyo files
+		# filename = tempfile.mkstemp()[1]
+		# print(filename)
+		# string = '%s setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES\n' % (
+		# 	sys.executable)
+		# string += "sed -i -e 's/\(.*\.py$\)/\\1\\n\\1c\\n\\1o/' INSTALLED_FILES\n"
+		# o = open(filename, 'w')
+		# o.write(string)
+		# o.close()
+		# self.install_script = filename
+		# # end hack
 
 		bdist_rpm.finalize_options(self)
 
@@ -82,10 +82,10 @@ class local_bdist_rpm(bdist_rpm):
 binDir = '/usr/bin'
 sbinDir = '/usr/sbin'
 
-paths = ['%s/' % binDir, "/etc/init.d", "%s/" % sbinDir]
+paths = ['%s/' % binDir, "/usr/lib/systemd/system/", "%s/" % sbinDir]
 scr = [['client/master', 'client/sark', 'client/sark-sma',
         'client/nadmin', 'client/mcehandler', 'client/sark-ddn'],
-       ["client/master-sark", "server/master-mcp"], ["server/mcp"]]
+       ["client/master-sark.service", "server/master-mcp.service"], ["server/mcp"]]
 thescripts = list(zip(paths, scr))
 
 mcp_bin_dirs = open('misc/mcp-bin-dirs.sh', 'w')
