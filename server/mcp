@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # vim: tabstop=4:noexpandtab:shiftwidth=4:
 #
@@ -63,9 +63,9 @@ import time
 import master
 import mimetypes
 from optparse import OptionParser
-from xmlrpclib import Fault
+from xmlrpc.client import Fault
 from twisted.enterprise import adbapi
-from twisted.internet import reactor
+from twisted.internet import reactor, endpoints
 from twisted.web import xmlrpc, server, http, resource
 from twisted.names import client
 
@@ -103,729 +103,734 @@ connPool = None
 
 
 def epochTo8601(epoch):
-	try:
-		return time.strftime("%F %T", time.localtime(epoch))
-	except TypeError:
-		return epoch
+  try:
+    return time.strftime("%F %T", time.localtime(epoch))
+  except TypeError:
+    return epoch
 
 
 def Failure(code, message, srvdbg=""):
-	"""Return an xmlrpclib.Fault after calling the current master.debug function"""
-	master.debug("Failure %s:%s:%s" % tuple(
-		[str(x) for x in code, message, srvdbg]))
-	return Fault(code, message)
+  """Return an xmlrpclib.Fault after calling the current master.debug function"""
+  master.debug("Failure %s:%s:%s" % tuple(
+      [str(x) for x in (code, message, srvdbg)]))
+  return Fault(code, message)
 
 
 class Authorizer:
-	"A Mixin class to do authorization checks on resource requests"
+  "A Mixin class to do authorization checks on resource requests"
 
-	def authorize(self, request, authorizedCallback):
-		"call authorizedCallback if the host is in the db, otherwise return an unauthorized message"
+  def authorize(self, request, authorizedCallback):
+    "call authorizedCallback if the host is in the db, otherwise return an unauthorized message"
 
-		def returnAuthorized():
-			authorizedCallback()
+    def returnAuthorized():
+      authorizedCallback()
 
-		def returnError(msg):
-			"return an unauthorized message"
-			request.setResponseCode(http.UNAUTHORIZED, bytes(msg))
-			request.write(
-				"<html><title>Unauthorized</title><body><h1>401: Unauthorized</h1></body></html>")
-			request.finish()
-			master.debug("Error in Authorization: " + str(msg))
+    def returnError(msg):
+      "return an unauthorized message"
+      request.setResponseCode(http.UNAUTHORIZED, bytes(msg))
+      request.write(
+          "<html><title>Unauthorized</title><body><h1>401: Unauthorized</h1></body></html>")
+      request.finish()
+      master.debug("Error in Authorization: " + str(msg))
 
-		def checkCount(name):
-			"if there is an entry in the db, then we can talk to this host"
-			def callback(res):
-				if res[0][0] > 0:
-					return returnAuthorized()
-				else:
-					returnError("Host %s not found in Database" % name)
-			return callback
+    def checkCount(name):
+      "if there is an entry in the db, then we can talk to this host"
+      def callback(res):
+        if res[0][0] > 0:
+          return returnAuthorized()
+        else:
+          returnError("Host %s not found in Database" % name)
+      return callback
 
-		def dbLookup(res):
-			"After finding the hostname, strip off the longest search domain and look it up in the db"
-			hostname = str(res[0][0].payload.name)
-			# master.debug(hostname);
-			for i in self.search:
-				ind = hostname.rfind(i)
-				if ind != -1:
-					hostname = hostname[0:ind - 1]
-					break
-			connPool.runQuery("select count(*) from node where name = %(client_name)s", {"client_name": hostname}
-                     ).addCallback(checkCount(hostname)
-                                   ).addErrback(returnError)
-
-		if request.client.host == "127.0.0.1" or master.config["mcp_host_authorization"] == False:
-			returnAuthorized()
-			return server.NOT_DONE_YET
-		else:
-			#print request.client.host
-			# because twisted doesn't have a reverse lookup, I have to do a pointer record lookup
-			client.lookupPointer('.'.join(request.client.host.split('.')[::-1]) + '.in-addr.arpa'
-                        ).addCallback(dbLookup
+    def dbLookup(res):
+      "After finding the hostname, strip off the longest search domain and look it up in the db"
+      hostname = str(res[0][0].payload.name)
+      # master.debug(hostname);
+      for i in self.search:
+        ind = hostname.rfind(i)
+        if ind != -1:
+          hostname = hostname[0:ind - 1]
+          break
+      connPool.runQuery("select count(*) from node where name = %(client_name)s", {"client_name": hostname}
+                        ).addCallback(checkCount(hostname)
                                       ).addErrback(returnError)
-			# this *should* be ok to do because I am in the main thread
-			self.search = []
-			for i in open("/etc/resolv.conf"):
-				if i.find("search") == 0 or i.find("domain") == 0:
-					self.search += i[:-1].split()[1:]
-			self.search.sort(lambda l, r: len(r) - len(l))
-			return server.NOT_DONE_YET
+
+    if request.client.host == "127.0.0.1" or master.config["mcp_host_authorization"] == False:
+      master.debug("localhost or config auth approved")
+      returnAuthorized()
+      return server.NOT_DONE_YET
+    else:
+      # print request.client.host
+      # because twisted doesn't have a reverse lookup, I have to do a pointer record lookup
+      client.lookupPointer('.'.join(request.client.host.split('.')[::-1]) + '.in-addr.arpa'
+                           ).addCallback(dbLookup
+                                         ).addErrback(returnError)
+      # this *should* be ok to do because I am in the main thread
+      self.search = []
+      for i in open("/etc/resolv.conf"):
+        if i.find("search") == 0 or i.find("domain") == 0:
+          self.search += i[:-1].split()[1:]
+      self.search.sort(lambda l, r: len(r) - len(l))
+      return server.NOT_DONE_YET
 
 
 class ForwardToWeb(resource.Resource):
-	"A class to forward any requests to the web directory"
-	isLeaf = True
+  "A class to forward any requests to the web directory"
+  isLeaf = True
 
-	def render(self, request):
-		request.setResponseCode(http.MOVED_PERMANENTLY)
-		request.setHeader("Location", "web/")
-		return ""
+  def render(self, request):
+    request.setResponseCode(http.MOVED_PERMANENTLY)
+    request.setHeader("Location", "web/")
+    return ""
 
 
 class MasterWebServerFile(resource.Resource, Authorizer):
-	"Lookup a file in the web_directory and return it to the client"
-	isLeaf = True
+  "Lookup a file in the web_directory and return it to the client"
+  isLeaf = True
 
-	def render_GET(self, request):
-		def response():
-			fullpath = "%s/%s" % (master.config["web_directory"],
-			                      "/".join(request.prepath[1:]))
-			request.setHeader("Content-type", mimetypes.guess_type(fullpath)[0])
-       			request.write(open(fullpath).read())
-			request.finish()
-		return self.authorize(request, response)
+  def render_GET(self, request):
+    def response():
+      fullpath = "%s/%s" % (master.config["web_directory"],
+                            "/".join(request.prepath[1:]))
+      request.setHeader("Content-type", mimetypes.guess_type(fullpath)[0])
+      request.write(open(fullpath).read())
+      request.finish()
+    return self.authorize(request, response)
 
 
 class MasterWebServer(resource.Resource):
-	"""The base web server directory class.  If requested directly, forward to the directory. If
-	the directory is requested, see if there is a file in the config["web_directory"] and load it
-	by calling the MasterWebServerFile class"""
-	isLeaf = False
+  """The base web server directory class.  If requested directly, forward to the directory. If
+  the directory is requested, see if there is a file in the config["web_directory"] and load it
+  by calling the MasterWebServerFile class"""
+  isLeaf = False
 
-	def render(self, request):
-		request.setResponseCode(http.MOVED_PERMANENTLY)
-		request.setHeader("Location", "web/")
-		return ""
+  def render(self, request):
+    request.setResponseCode(http.MOVED_PERMANENTLY)
+    request.setHeader("Location", "web/")
+    return ""
 
-	def getChild(self, path, request):
-		if path == "":
-			path = request.prepath[-1] = "index.html"
-		fullpath = "%s/%s/%s" % (master.config["web_directory"],
-		                         "/".join(request.prepath[1:-1]), path)
-		if os.path.isfile(fullpath):
-			return MasterWebServerFile()
-		elif os.path.isdir(fullpath):
-			return MasterWebServer()
-		else:
-			master.debug(
-				"Error, File not found or not enough permissions: %s", fullpath)
-			return resource.Resource.getChild(self, path, request)
+  def getChild(self, path, request):
+    if path == "":
+      path = request.prepath[-1] = "index.html"
+    fullpath = "%s/%s/%s" % (master.config["web_directory"],
+                             "/".join(request.prepath[1:-1]), path)
+    if os.path.isfile(fullpath):
+      return MasterWebServerFile()
+    elif os.path.isdir(fullpath):
+      return MasterWebServer()
+    else:
+      master.debug(
+          "Error, File not found or not enough permissions: %s", fullpath)
+      return resource.Resource.getChild(self, path, request)
 
 
 class MasterXMLRPCBase(xmlrpc.XMLRPC, Authorizer):
-	"Check to see if the client is autorized in an xmlrpc call"
+  "Check to see if the client is autorized in an xmlrpc call"
 
-	def render(self, request):
-		def renderAuthorized():
-			return xmlrpc.XMLRPC.render(self, request)
-		return self.authorize(request, renderAuthorized)
+  def render(self, request):
+    def renderAuthorized():
+      return xmlrpc.XMLRPC.render(self, request)
+    return self.authorize(request, renderAuthorized)
 
 
 class MasterXMLRPCServer(xmlrpc.XMLRPC):
-	# @dbRW
-	def xmlrpc_addNode(self, name):
-		"""addNode(name) -> Boolean
+  # @dbRW
+  def xmlrpc_addNode(self, name):
+    """addNode(name) -> Boolean
 
-		Create a new node.
-		Returns new nodes unique ID or xmlrpclib.Fault on Error"""
-		return connPool.runOperation("insert into node (name) values (%(name)s)", {"name": name}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda a: Failure(10, "addNode failed for %s" % name, a))
-	xmlrpc_addNode.signature = [["bool", "string"]]
-
-	# @dbRO
-	def xmlrpc_getNodes(self, filter=False):
-		"""getNodes(filter=False) -> ['name1','name2',...]
-
-		Get a list of nodes
-		filter - A filter on what names should be returned. uses standard sql wildcards (i.e. n% matches n10)
-		"""
-		return connPool.runQuery("select name from node" + {True: " where name like %(filter)s", False: ""}[filter != False], {"filter": filter}
-                           ).addErrback(lambda a: Failure(20, "getNodes failed: filter=%s" % (str(filter)), a))
-	xmlrpc_getNodes.signature = [["array"], ["array", "string"]]
-
-	# @dbRW
-	def xmlrpc_addStatus(self, name, desc=''):
-		"""addStatus(name,desc = '') -> Boolean
-
-		Create a new status type, with name and descripition.
-		Returns new status ID or xmlrpclib.Fault on error"""
-		return connPool.runOperation("insert into status (name, description) values (%(name)s, %(desc)s)", {"name": name, "desc": desc}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda msg: Failure(10, "addStatus failed for %s:%s" % (name, desc), msg))
-	xmlrpc_addStatus.signature = [
-		["bool", "string"], ["bool", "string", "string"]]
-
-	# @dbRO
-
-	def xmlrpc_getStatus(self, names=False):
-		"""getStatus(names=False) -> {'name':'Description',...}
-
-		Get a list of statuses.
-		names - a list of status names, if list is empty return all statuses
-		"""
-		return connPool.runQuery("select name, description from status" + {True: " where name in %(names)s", False: ""}[names != False], {"names": names}
-                           ).addCallback(lambda res: dict(res)
-                                         ).addErrback(lambda msg: Failure(20, "getStatus failed for %s" % (str(names)), msg))
-	xmlrpc_getStatus.signature = [["struct"], ["struct", "array"]]
-
-	def xmlrpc_addEvent(self, name, description=''):
-		"""addEvent(name, description = '') -> Boolean
-
-		Creates a new event, with name and description.
-		Returns True or xmlrpclib.Fault on error"""
-		return connPool.runOperation("""
-							   INSERT INTO
-								event (name, description)
-							   VALUES (%(name)s, %(description)s)""",
-                               {'name': name, 'description': description}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda msg: Failure(10,
-                                                                              "addEvent failed for %s:%s" % (name,
-                                                                                                             description), msg))
-	xmlrpc_addEvent.signature = [["bool", "string"],
-                              ["bool", "string", "string"]]
-
-	def xmlrpc_getEvent(self, names=False):
-		"""getEvent(names=False) -> {'name': 'Description',...}
-
-		Get a list of events.
-		names - a list of event names, if list is empty return all events
-		"""
-		query = """
-			SELECT
-				name, description
-				FROM event"""
-		if names:
-			query += " WHERE name IN %(names)s"
-		else:
-			names = []
-
-		return connPool.runQuery(query, {'names': tuple(names)}
-                           ).addCallback(lambda res: dict(res)
-                                         ).addErrback(lambda msg: Failure(20,
-                                                                          "getEvent failed for %s" % (
-                                                                              str(names)),
-                                                                          msg))
-	xmlrpc_getEvent.signature = [["struct"], ["struct", "array"]]
-
-	# @dbRW
-	def xmlrpc_addProperty(self, name, desc=''):
-		"""addProperty(name,desc = '') -> Boolean
-
-		Create a new property type, with name and descripition.
-		Returns new status ID or xmlrpclib.Fault on Error"""
-		return connPool.runOperation("insert into property (name, description) values (%(name)s, %(desc)s)", {"name": name, "desc": desc}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda msg: Failure(10, "addProperty failed for %s:%s" % (name, desc), msg))
-	xmlrpc_addProperty.signature = [
-		["bool", "string"], ["bool", "string", "string"]]
-
-	# @dbRO
-	def xmlrpc_getProperties(self, names=False):
-		"""getProperties(names=[]) -> {'name':'Description',...}
-
-		Get a list of properties as a dictionary
-		names - a list of property names, if list is empty return all properties
-		"""
-		return connPool.runQuery("select name, description from property" + {True: " where name in %(names)s", False: ""}[names != False], {"names": names}
-                           ).addCallback(lambda res: dict(res)
-                                         ).addErrback(lambda msg: Failure(20, "getProperties failed for %s" % (str(names)), msg))
-	xmlrpc_getProperties.signature = [["struct"], ["struct", "array"]]
-
-	# @dbRW
-	def xmlrpc_addUser(self, name, fullname):
-		"""addUser(name,fullname) -> Boolean
-
-		Add a user in the database.
-		name - unique username, should match unix username such as 'efelix'
-		fullname - Printable Name of the user such as 'Evan J. Felix'
-		"""
-		return connPool.runOperation("insert into users (username,name) values (%(name)s,%(fullname)s)", {"name": name, "fullname": fullname}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda msg: Failure(10, "addUser failed for %s:%s" % (name, fullname), msg))
-	xmlrpc_addUser.signature = [["bool", "string", "string"]]
-
-	# @dbRO
-	def xmlrpc_getUsers(self, names=False):
-		"""getUsers(names=[]) -> {'username':'fullname',...}
-
-		Get a list of users.
-		names - a list of usernames, if list is empty return all users
-		"""
-		return connPool.runQuery("select username, name from users" + {True: " where username in %(names)s", False: ""}[names != False], {"names": names}
-                           ).addCallback(lambda res: dict(res)
-                                         ).addErrback(lambda msg: Failure(20, "getUsers failed for %s" % (str(names)), msg))
-	xmlrpc_getUsers.signature = [["struct"], ["struct", "array"]]
-
-	# FIXME I may need to get a static time when "now" is passed
-	# @dbRW
-	def xmlrpc_updateStatus(self, nodes, status, user, comment="", time="now"):
-		"""updateStatus(nodes,status,user,comment,timeistamp) -> Boolean
-
-		Change the status of a list of nodes.
-		Comments and timestamp are optional
-		Returns True on success, xmlrpclib.Fault on Error
-		"""
-		def updateStatus(txn, node, status, user, comment, time):
-			txn.executemany("""insert into node_status_log (node_id, status_id, time, comment, user_id) values (
-						(select id from node where name = %(node)s),
-						(select id from status where name = %(status)s), %(time)s, %(comment)s,
-						(select id from users where username = %(user)s))""",
-                            [{"node": i, "status": status, "time": epochTo8601(
-                            	time), "comment": comment, "user": user} for i in nodes]
-                   )
-		return connPool.runInteraction(updateStatus, nodes, status, user, comment, time
+    Create a new node.
+    Returns new nodes unique ID or xmlrpclib.Fault on Error"""
+    return connPool.runOperation("insert into node (name) values (%(name)s)", {"name": name}
                                  ).addCallback(lambda a: True
-                                               ).addErrback(lambda msg: Failure(10, "updateStatus failed for %s" % (str((nodes, status, user, comment, time))), msg))
-	xmlrpc_updateStatus.signature = [	["bool", "array", "string", "string"],
+                                               ).addErrback(lambda a: Failure(10, "addNode failed for %s" % name, a))
+  xmlrpc_addNode.signature = [["bool", "string"]]
+
+  # @dbRO
+  def xmlrpc_getNodes(self, filter=False):
+    """getNodes(filter=False) -> ['name1','name2',...]
+
+    Get a list of nodes
+    filter - A filter on what names should be returned. uses standard sql wildcards (i.e. n% matches n10)
+    """
+    return connPool.runQuery("select name from node" + {True: " where name like %(filter)s", False: ""}[filter != False], {"filter": filter}
+                             ).addErrback(lambda a: Failure(20, "getNodes failed: filter=%s" % (str(filter)), a))
+  xmlrpc_getNodes.signature = [["array"], ["array", "string"]]
+
+  # @dbRW
+  def xmlrpc_addStatus(self, name, desc=''):
+    """addStatus(name,desc = '') -> Boolean
+
+    Create a new status type, with name and descripition.
+    Returns new status ID or xmlrpclib.Fault on error"""
+    return connPool.runOperation("insert into status (name, description) values (%(name)s, %(desc)s)", {"name": name, "desc": desc}
+                                 ).addCallback(lambda a: True
+                                               ).addErrback(lambda msg: Failure(10, "addStatus failed for %s:%s" % (name, desc), msg))
+  xmlrpc_addStatus.signature = [
+      ["bool", "string"], ["bool", "string", "string"]]
+
+  # @dbRO
+
+  def xmlrpc_getStatus(self, names=False):
+    """getStatus(names=False) -> {'name':'Description',...}
+
+    Get a list of statuses.
+    names - a list of status names, if list is empty return all statuses
+    """
+    return connPool.runQuery("select name, description from status" + {True: " where name in %(names)s", False: ""}[names != False], {"names": names}
+                             ).addCallback(lambda res: dict(res)
+                                           ).addErrback(lambda msg: Failure(20, "getStatus failed for %s" % (str(names)), msg))
+  xmlrpc_getStatus.signature = [["struct"], ["struct", "array"]]
+
+  def xmlrpc_addEvent(self, name, description=''):
+    """addEvent(name, description = '') -> Boolean
+
+    Creates a new event, with name and description.
+    Returns True or xmlrpclib.Fault on error"""
+    return connPool.runOperation("""
+                 INSERT INTO
+                event (name, description)
+                 VALUES (%(name)s, %(description)s)""",
+                                 {'name': name, 'description': description}
+                                 ).addCallback(lambda a: True
+                                               ).addErrback(lambda msg: Failure(10,
+                                                                                "addEvent failed for %s:%s" % (name,
+                                                                                                               description), msg))
+  xmlrpc_addEvent.signature = [["bool", "string"],
+                               ["bool", "string", "string"]]
+
+  def xmlrpc_getEvent(self, names=False):
+    """getEvent(names=False) -> {'name': 'Description',...}
+
+    Get a list of events.
+    names - a list of event names, if list is empty return all events
+    """
+    query = """
+      SELECT
+        name, description
+        FROM event"""
+    if names:
+      query += " WHERE name IN %(names)s"
+    else:
+      names = []
+
+    return connPool.runQuery(query, {'names': tuple(names)}
+                             ).addCallback(lambda res: dict(res)
+                                           ).addErrback(lambda msg: Failure(20,
+                                                                            "getEvent failed for %s" % (
+                                                                                str(names)),
+                                                                            msg))
+  xmlrpc_getEvent.signature = [["struct"], ["struct", "array"]]
+
+  # @dbRW
+  def xmlrpc_addProperty(self, name, desc=''):
+    """addProperty(name,desc = '') -> Boolean
+
+    Create a new property type, with name and descripition.
+    Returns new status ID or xmlrpclib.Fault on Error"""
+    return connPool.runOperation("insert into property (name, description) values (%(name)s, %(desc)s)", {"name": name, "desc": desc}
+                                 ).addCallback(lambda a: True
+                                               ).addErrback(lambda msg: Failure(10, "addProperty failed for %s:%s" % (name, desc), msg))
+  xmlrpc_addProperty.signature = [
+      ["bool", "string"], ["bool", "string", "string"]]
+
+  # @dbRO
+  def xmlrpc_getProperties(self, names=False):
+    """getProperties(names=[]) -> {'name':'Description',...}
+
+    Get a list of properties as a dictionary
+    names - a list of property names, if list is empty return all properties
+    """
+    return connPool.runQuery("select name, description from property" + {True: " where name in %(names)s", False: ""}[names != False], {"names": names}
+                             ).addCallback(lambda res: dict(res)
+                                           ).addErrback(lambda msg: Failure(20, "getProperties failed for %s" % (str(names)), msg))
+  xmlrpc_getProperties.signature = [["struct"], ["struct", "array"]]
+
+  # @dbRW
+  def xmlrpc_addUser(self, name, fullname):
+    """addUser(name,fullname) -> Boolean
+
+    Add a user in the database.
+    name - unique username, should match unix username such as 'efelix'
+    fullname - Printable Name of the user such as 'Evan J. Felix'
+    """
+    return connPool.runOperation("insert into users (username,name) values (%(name)s,%(fullname)s)", {"name": name, "fullname": fullname}
+                                 ).addCallback(lambda a: True
+                                               ).addErrback(lambda msg: Failure(10, "addUser failed for %s:%s" % (name, fullname), msg))
+  xmlrpc_addUser.signature = [["bool", "string", "string"]]
+
+  # @dbRO
+  def xmlrpc_getUsers(self, names=False):
+    """getUsers(names=[]) -> {'username':'fullname',...}
+
+    Get a list of users.
+    names - a list of usernames, if list is empty return all users
+    """
+    return connPool.runQuery("select username, name from users" + {True: " where username in %(names)s", False: ""}[names != False], {"names": names}
+                             ).addCallback(lambda res: dict(res)
+                                           ).addErrback(lambda msg: Failure(20, "getUsers failed for %s" % (str(names)), msg))
+  xmlrpc_getUsers.signature = [["struct"], ["struct", "array"]]
+
+  # FIXME I may need to get a static time when "now" is passed
+  # @dbRW
+  def xmlrpc_updateStatus(self, nodes, status, user, comment="", time="now"):
+    """updateStatus(nodes,status,user,comment,timeistamp) -> Boolean
+
+    Change the status of a list of nodes.
+    Comments and timestamp are optional
+    Returns True on success, xmlrpclib.Fault on Error
+    """
+    def updateStatus(txn, node, status, user, comment, time):
+      txn.executemany("""insert into node_status_log (node_id, status_id, time, comment, user_id) values (
+            (select id from node where name = %(node)s),
+            (select id from status where name = %(status)s), %(time)s, %(comment)s,
+            (select id from users where username = %(user)s))""",
+                      [{"node": i, "status": status, "time": epochTo8601(
+                          time), "comment": comment, "user": user} for i in nodes]
+                      )
+    return connPool.runInteraction(updateStatus, nodes, status, user, comment, time
+                                   ).addCallback(lambda a: True
+                                                 ).addErrback(lambda msg: Failure(10, "updateStatus failed for %s" % (str((nodes, status, user, comment, time))), msg))
+  xmlrpc_updateStatus.signature = [["bool", "array", "string", "string"],
                                    ["bool", "array", "string", "string", "string"],
                                    ["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
 
-	# @dbRO
-	def xmlrpc_getNodeStatus(self, nodes):
-		"""getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
+  # @dbRO
+  def xmlrpc_getNodeStatus(self, nodes):
+    """getCurrentStatus(nodes) -> {'node1':(statusName,timeStamp,user,comment),...}
 
-		Retrieve the current status of a node or set of nodes
-		The nodes parameter is a list of nodes to get status for
-		Timestamps are a POSIX timestamp
-		"""
-		# should I use subqueries for these views?
-		return connPool.runQuery("""select node.name, status.name, extract(epoch from last_change)::int4, users.username, comment
-						from node_status, node, status, users
-						where node_status.node_id = node.id and node_status.status_id = status.id
-						and users.id = user_id and node.name in %(nodes)s""", {"nodes": nodes}
-                           ).addCallback(lambda res: dict([(i[0], i[1:]) for i in res])
-                                         ).addErrback(lambda msg: Failure(20, "getNodeStatus failed for %s" % (str(nodes)), msg))
-	xmlrpc_getNodeStatus.signature = ["struct", "array"]
+    Retrieve the current status of a node or set of nodes
+    The nodes parameter is a list of nodes to get status for
+    Timestamps are a POSIX timestamp
+    """
+    # should I use subqueries for these views?
+    return connPool.runQuery("""select node.name, status.name, extract(epoch from last_change)::int4, users.username, comment
+            from node_status, node, status, users
+            where node_status.node_id = node.id and node_status.status_id = status.id
+            and users.id = user_id and node.name in %(nodes)s""", {"nodes": tuple(nodes)}
+                             ).addCallback(lambda res: dict([(i[0], i[1:]) for i in res])
+                                           ).addErrback(lambda msg: Failure(20, "getNodeStatus failed for %s" % (str(nodes)), msg))
+  xmlrpc_getNodeStatus.signature = ["struct", "array"]
 
-	# @dbRO
-	def xmlrpc_getStatusHistory(self, nodes, filter=False, startTime='-infinity', endTime='infinity'):
-		"""getStatusHistory(nodes,filter=false,startTime=-infinity,endTime=inifinity) -> {'node1':[(statusName,timestamp,user,comment),...],'node2':...}
+  # @dbRO
+  def xmlrpc_getStatusHistory(self, nodes, filter=False, startTime='-infinity', endTime='infinity'):
+    """getStatusHistory(nodes,filter=false,startTime=-infinity,endTime=inifinity) -> {'node1':[(statusName,timestamp,user,comment),...],'node2':...}
 
-		Retrieve a ordered list of status changes in a time period for a list of nodes
-		Nodes that are not in the system will be silently ignored.
+    Retrieve a ordered list of status changes in a time period for a list of nodes
+    Nodes that are not in the system will be silently ignored.
 
-		filter - set of status names that are allowed to be returned
-		*Time - Date & Time for start and end of data requested.
+    filter - set of status names that are allowed to be returned
+    *Time - Date & Time for start and end of data requested.
 
-		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-		"""
-		def format_history(res):
-			ret = {}
-			for i in res:
-				try:
-					ret[i[0]] += [i[1:]]
-				except KeyError:
-					ret[i[0]] = [i[1:]]
-			return ret
+    Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+    """
+    def format_history(res):
+      ret = {}
+      for i in res:
+        try:
+          ret[i[0]] += [i[1:]]
+        except KeyError:
+          ret[i[0]] = [i[1:]]
+      return ret
 
-		return connPool.runQuery("""select node.name, s.name, extract(epoch from time), users.username, comment
-				from node_status_log, node, status s, users
-				where node.id = node_id and s.id = status_id and users.id = user_id
-				and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
-                           {True: "", False: "and s.name in %(status)s "}[filter == False] +
-                           "order by time", {"nodes": nodes, "status": filter,
+    return connPool.runQuery("""select node.name, s.name, extract(epoch from time), users.username, comment
+        from node_status_log, node, status s, users
+        where node.id = node_id and s.id = status_id and users.id = user_id
+        and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
+                             {True: "", False: "and s.name in %(status)s "}[filter == False]
+                             + "order by time", {"nodes": tuple(nodes), "status": filter,
                                                "start": epochTo8601(startTime), "end": epochTo8601(endTime)}
-                           ).addCallback(format_history
-                                         ).addErrback(lambda msg: Failure(20, "getStatusHistory Failed for %s" % (str((nodes, filter, startTime, endTime))), msg))
-	xmlrpc_getStatusHistory.signature = [	["struct", "array"],
+                             ).addCallback(format_history
+                                           ).addErrback(lambda msg: Failure(20, "getStatusHistory Failed for %s" % (str((nodes, filter, startTime, endTime))), msg))
+  xmlrpc_getStatusHistory.signature = [["struct", "array"],
                                        ["struct", "array", "string"],
                                        ["struct", "array", "string", "int"],
                                        ["struct", "array", "string", "int", "int"]]
 
-	def xmlrpc_storeNodeEvent(self, nodes, event, user, comment="", time="now"):
-		"""storeNodeEvent(nodes, event, user, comment, time) -> Boolean
+  def xmlrpc_storeNodeEvent(self, nodes, event, user, comment="", time="now"):
+    """storeNodeEvent(nodes, event, user, comment, time) -> Boolean
 
-		Creates an event log entry for a list of nodes.
-		Comment and timestamp are optional.
-		Returns True on success, xmlrpclib.Fault on error.
-		"""
-		def storeEvent(txn, nodes, event, user, comment, time):
-			txn.execute("""
-				INSERT INTO
-	 			   node_event_log (node_id, event_id, time, comment, user_id)
-				   SELECT
-						node.id,
-						(SELECT id FROM event WHERE name = %(event)s),
-						%(time)s,
-						%(comment)s,
-						(SELECT id FROM users WHERE username = %(user)s)
-						FROM
-							node
-						WHERE
-							node.name IN %(nodes)s""",
-                            {
-                                "nodes": tuple(nodes),
-                                "user": user,
-                          						"time": epochTo8601(time),
-                          						"comment": comment,
-                          						"event": event
-                            })
-		return connPool.runInteraction(storeEvent, nodes, event,
-                                 user, comment, time
+    Creates an event log entry for a list of nodes.
+    Comment and timestamp are optional.
+    Returns True on success, xmlrpclib.Fault on error.
+    """
+    def storeEvent(txn, nodes, event, user, comment, time):
+      txn.execute("""
+        INSERT INTO
+            node_event_log (node_id, event_id, time, comment, user_id)
+           SELECT
+            node.id,
+            (SELECT id FROM event WHERE name = %(event)s),
+            %(time)s,
+            %(comment)s,
+            (SELECT id FROM users WHERE username = %(user)s)
+            FROM
+              node
+            WHERE
+              node.name IN %(nodes)s""",
+                  {
+                      "nodes": tuple(nodes),
+                      "user": user,
+                      "time": epochTo8601(time),
+                      "comment": comment,
+                      "event": event
+                  })
+    return connPool.runInteraction(storeEvent, nodes, event,
+                                   user, comment, time
+                                   ).addCallback(lambda a: True
+                                                 ).addErrback(lambda msg: Failure(10,
+                                                                                  "storeNodeEvent failed for %s" %
+                                                                                  (str((nodes, event, user, comment,
+                                                                                        time))), msg))
+  xmlrpc_storeNodeEvent.signature = [
+      ["bool", "array", "string", "string"],
+      ["bool", "array", "string", "string", "string"],
+      ["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
+
+  def xmlrpc_getNodeEventHistory(self, nodes, filter=False,
+                                 startTime='-infinity', endTime='infinity'):
+    """getNodeEventHistory(nodes, filter=False, startTime='-infinity', endTime='infinity') -> {'node1': [('eventName,timestamp,comment),...],'node2':...}
+
+    Retrieve an ordered list of node events in a given time period for a
+    list of nodes.
+
+    Nodes that are not in the system will be silently ignored.
+
+    filter - set of events that are to be returned.
+    *Time - Datem & Time for start and end of requested data.
+
+    Timestamp values are the strings 'now', '-infinity', 'infinity' or an
+    integer representing a POSIX timestamp.
+    """
+
+    def format_history(res):
+      ret = {}
+      for i in res:
+        try:
+          ret[i[0]] += [i[1:]]
+        except KeyError:
+          ret[i[0]] = [i[1:]]
+      return ret
+    query = """SELECT
+          node.name, event.name, EXTRACT('epoch' FROM time),
+          users.username, comment
+          FROM
+            node_event_log
+            JOIN node ON node.id = node_event_log.node_id
+            JOIN event ON event.id = node_event_log.event_id
+            JOIN users ON users.id = node_event_log.user_id
+          WHERE
+            node.name IN %(nodes)s
+            AND
+            time BETWEEN %(start)s AND %(end)s"""
+    if filter:
+      query += " AND event.name IN %(event)s "
+    query += """ ORDER BY time"""
+
+    return connPool.runQuery(query,
+                             {
+                                 "nodes": nodes,
+                                 "event": filter,
+                                 "start": epochTo8601(startTime),
+                                 "end": epochTo8601(endTime)
+                             }
+                             ).addCallback(format_history
+                                           ).addErrback(lambda msg:
+                                                        Failure(20, "getNodeEventHistory Failed for %s " %
+                                                                (str((nodes, filter, startTime, endTime))), msg))
+
+  xmlrpc_getNodeEventHistory.signature = [
+      ["struct", "array"],
+      ["struct", "array", "string"],
+      ["struct", "array", "string", "int"],
+      ["struct", "array", "string", "int", "int"]]
+
+  # FIXME return bool or timestamp?
+  # @dbRW
+  def xmlrpc_updateNodeProperty(self, node, property, propertyValue, comment="", time="now"):
+    """updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
+
+    Update a property value of a list of nodes.
+      node		- node to set the property on
+      property	- Property to change, name
+      propertyValue	- value to change property to.
+      comment		- user comment on this change
+      time		- a timestamp for the change.  Defaults to 'now'
+
+    Returns timestamp of change, or xmlrpclib.Fault on error
+
+    Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+    """
+    return connPool.runOperation("""insert into node_properties_log (node_id, property_id, time, value, comment)
+            values ((select id from node where name = %(node)s),
+            (select id from property where name = %(property)s),
+            %(time)s, %(propertyValue)s, %(comment)s)""",
+                                 {"node": node, "property": property, "time": epochTo8601(time),
+                                  "propertyValue": propertyValue, "comment": comment}
                                  ).addCallback(lambda a: True
-                                               ).addErrback(lambda msg: Failure(10,
-                                                                                "storeNodeEvent failed for %s" %
-                                                                                (str((nodes, event, user, comment,
-                                                                                      time))), msg))
-	xmlrpc_storeNodeEvent.signature = [
-		["bool", "array", "string", "string"],
-		["bool", "array", "string", "string", "string"],
-		["bool", "array", "string", "string", "string", "dateTime.iso8601"]]
-
-	def xmlrpc_getNodeEventHistory(self, nodes, filter=False,
-                                startTime='-infinity', endTime='infinity'):
-		"""getNodeEventHistory(nodes, filter=False, startTime='-infinity', endTime='infinity') -> {'node1': [('eventName,timestamp,comment),...],'node2':...}
-
-		Retrieve an ordered list of node events in a given time period for a
-		list of nodes.
-
-		Nodes that are not in the system will be silently ignored.
-
-		filter - set of events that are to be returned.
-		*Time - Datem & Time for start and end of requested data.
-
-		Timestamp values are the strings 'now', '-infinity', 'infinity' or an
-		integer representing a POSIX timestamp.
-		"""
-
-		def format_history(res):
-			ret = {}
-			for i in res:
-				try:
-					ret[i[0]] += [i[1:]]
-				except KeyError:
-					ret[i[0]] = [i[1:]]
-			return ret
-		query = """SELECT
-					node.name, event.name, EXTRACT('epoch' FROM time),
-					users.username, comment
-					FROM
-						node_event_log
-						JOIN node ON node.id = node_event_log.node_id
-						JOIN event ON event.id = node_event_log.event_id
-						JOIN users ON users.id = node_event_log.user_id
-					WHERE
-						node.name IN %(nodes)s
-						AND
-						time BETWEEN %(start)s AND %(end)s"""
-		if filter:
-			query += " AND event.name IN %(event)s "
-		query += """ ORDER BY time"""
-
-		return connPool.runQuery(query,
-                           {
-                               "nodes": nodes,
-                     										"event": filter,
-                     										"start": epochTo8601(startTime),
-                     										"end": epochTo8601(endTime)
-                           }
-                           ).addCallback(format_history
-                                         ).addErrback(lambda msg:
-                                                      Failure(20, "getNodeEventHistory Failed for %s " %
-                                                              (str((nodes, filter, startTime, endTime))), msg))
-
-	xmlrpc_getNodeEventHistory.signature = [
-            ["struct", "array"],
-       					["struct", "array", "string"],
-       					["struct", "array", "string", "int"],
-       					["struct", "array", "string", "int", "int"]]
-
-	# FIXME return bool or timestamp?
-	# @dbRW
-	def xmlrpc_updateNodeProperty(self, node, property, propertyValue, comment="", time="now"):
-		"""updateProperty(node,property,propertyValue,comment="",time="now") -> timestamp
-
-		Update a property value of a list of nodes.
-			node		- node to set the property on
-			property	- Property to change, name
-			propertyValue	- value to change property to.
-			comment		- user comment on this change
-			time		- a timestamp for the change.  Defaults to 'now'
-
-		Returns timestamp of change, or xmlrpclib.Fault on error
-
-		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-		"""
-		return connPool.runOperation("""insert into node_properties_log (node_id, property_id, time, value, comment)
-						values ((select id from node where name = %(node)s),
-						(select id from property where name = %(property)s),
-						%(time)s, %(propertyValue)s, %(comment)s)""",
-                               {"node": node, "property": property, "time": epochTo8601(time),
-                                "propertyValue": propertyValue, "comment": comment}
-                               ).addCallback(lambda a: True
-                                             ).addErrback(lambda msg: Failure(10, "updateNodeProperty failed for %s" % (str((node, property, propertyValue, comment, time))), msg))
-	xmlrpc_updateNodeProperty.signature = [	["dateTime.iso8601", "string", "string", "string"],
+                                               ).addErrback(lambda msg: Failure(10, "updateNodeProperty failed for %s" % (str((node, property, propertyValue, comment, time))), msg))
+  xmlrpc_updateNodeProperty.signature = [["dateTime.iso8601", "string", "string", "string"],
                                          ["dateTime.iso8601", "string",
-                                         	"string", "string", "string"],
+                                          "string", "string", "string"],
                                          ["dateTime.iso8601", "string", "string", "string", "string", "dateTime.iso8601"]]
 
-	# @dbRO
-	def xmlrpc_getNodeProperties(self, nodes, filter=False):
-		"""getNodeProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+  # @dbRO
+  def xmlrpc_getNodeProperties(self, nodes, filter=False):
+    """getNodeProperties(nodes,filter=False) -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
 
-		Retrieve the current properties of the given nodes.
-		a filter is a list of id's allowed ("eth0mac","eth1mac")
-		Returns a dictionary of tuples containing (propName,value,timestamp,comment)
-		Timestamps are a POSIX timestamp
-		"""
+    Retrieve the current properties of the given nodes.
+    a filter is a list of id's allowed ("eth0mac","eth1mac")
+    Returns a dictionary of tuples containing (propName,value,timestamp,comment)
+    Timestamps are a POSIX timestamp
+    """
 
-		def format_properties(res):
-			retVal = {}
-			for i in res:
-				try:
-					retVal[i[0]].append(i[1:5])
-				except KeyError:
-					retVal[i[0]] = [i[1:5]]
-			return retVal
+    def format_properties(res):
+      retVal = {}
+      for i in res:
+        try:
+          retVal[i[0]].append(i[1:5])
+        except KeyError:
+          retVal[i[0]] = [i[1:5]]
+      return retVal
 
-		if type(filter) == type(""):
-			filter = [filter]
-		return connPool.runQuery("""select node.name, property.name, value, extract(epoch from last_change)::int4, comment
-					from node_properties, node, property
-					where node_properties.node_id = node.id and node_properties.property_id = property.id
-					and node.name in %(nodes)s """ +
-                           {True: "", False: "and property.name in %(filter)s "}[filter == False]
-                           + "order by last_change",
-                           {"nodes": nodes, "filter": filter}
-                           ).addCallback(format_properties
-                                         ).addErrback(lambda msg: Failure(20, "getNodeProperties failed for %s" % (str((nodes, filter))), msg))
-	xmlrpc_getNodeProperties.signature = [["struct", "array"], [
-		"struct", "array", "string"], ["struct", "array", "array"]]
+    if type(filter) == type(""):
+      filter = [filter]
+    return connPool.runQuery("""select node.name, property.name, value, extract(epoch from last_change)::int4, comment
+          from node_properties, node, property
+          where node_properties.node_id = node.id and node_properties.property_id = property.id
+          and node.name in %(nodes)s """ +
+                             {True: "", False: "and property.name in %(filter)s "}[filter == False] +
+                             "order by last_change",
+                             {"nodes": tuple(nodes), "filter": filter}
+                             ).addCallback(format_properties
+                                           ).addErrback(lambda msg: Failure(20, "getNodeProperties failed for %s" % (str((nodes, filter))), msg))
+  xmlrpc_getNodeProperties.signature = [["struct", "array"], [
+      "struct", "array", "string"], ["struct", "array", "array"]]
 
-	# @dbRO
-	def xmlrpc_getNodePropertyHistory(self, nodes, filter=False, startTime='-infinity', endTime='infinity'):
-		"""getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
+  # @dbRO
+  def xmlrpc_getNodePropertyHistory(self, nodes, filter=False, startTime='-infinity', endTime='infinity'):
+    """getNodePropertyHistory(nodes,filter=False,startTime='-infinity',endTime='infinity') -> {'node1':[(propName,value,timestamp,comment),...],'node2':[...],...}
 
-		Retrieve all property change logs for a given period.
-		If a time period is not specified returns all records.
+    Retrieve all property change logs for a given period.
+    If a time period is not specified returns all records.
 
-		filter is a list of property names allowed ("eth0mac","eth1mac")
-		*Time - Date & Time for start and end of data requested
-		Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-		"""
-		def formatNodePropertyHistory(res):
-			retDict = {}
-			for i in res:
-				try:
-					retDict[i[0]] += [i[1:5]]
-				except KeyError:
-					retDict[i[0]] = [i[1:5]]
-			return retDict
+    filter is a list of property names allowed ("eth0mac","eth1mac")
+    *Time - Date & Time for start and end of data requested
+    Timestamp values are the strings 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+    """
+    def formatNodePropertyHistory(res):
+      retDict = {}
+      for i in res:
+        try:
+          retDict[i[0]] += [i[1:5]]
+        except KeyError:
+          retDict[i[0]] = [i[1:5]]
+      return retDict
 
-		return connPool.runQuery("""select node.name, p.name, value, extract(epoch from time)::int4, comment
-					from node_properties_log, node, property p where node.id = node_id and p.id = property_id
-					and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
-                           {True: "", False: "and p.name in %(filter)s "}[filter == False]
-                           + "order by time",
-                           {"nodes": nodes, "filter": filter, "start": epochTo8601(
-                           	startTime), "end": epochTo8601(endTime)}
-                           ).addCallback(formatNodePropertyHistory
-                                         ).addErrback(lambda msg: Failure(20, "getNodePropertyHistory failed for %s" % (str((nodes, filter, startTime, endTime))), msg))
+    return connPool.runQuery("""select node.name, p.name, value, extract(epoch from time)::int4, comment
+          from node_properties_log, node, property p where node.id = node_id and p.id = property_id
+          and node.name in %(nodes)s and time between %(start)s and %(end)s """ +
+                             {True: "", False: "and p.name in %(filter)s "}[filter == False] +
+                             "order by time",
+                             {"nodes": tuple(nodes), "filter": filter, "start": epochTo8601(
+                                 startTime), "end": epochTo8601(endTime)}
+                             ).addCallback(formatNodePropertyHistory
+                                           ).addErrback(lambda msg: Failure(20, "getNodePropertyHistory failed for %s" % (str((nodes, filter, startTime, endTime))), msg))
 
-	xmlrpc_getNodePropertyHistory.signature = [	["struct", "array"],
+  xmlrpc_getNodePropertyHistory.signature = [["struct", "array"],
                                              ["struct", "array", "array"],
                                              ["struct", "array", "array", "int"],
                                              ["struct", "array", "array", "int", "int"]]
 
-	# @dbRO
-	def xmlrpc_getNodesFilter(self, filt):
-		"""getNodesFilter(filt) -> list
+  # @dbRO
+  def xmlrpc_getNodesFilter(self, filt):
+    """getNodesFilter(filt) -> list
 
-		The following keyword arguments take a string or list of strings
+    The following keyword arguments take a string or list of strings
 
-		status
-		statuslike
-		property
-		propertylike
-		propvalue
-		propvaluelike
-		node
-		nodelike
-		user
-		userlike
+    status
+    statuslike
+    property
+    propertylike
+    propvalue
+    propvaluelike
+    node
+    nodelike
+    user
+    userlike
 
-		These arguments take a time value the is a string value such as 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
-		startTime
-		endTime
+    These arguments take a time value the is a string value such as 'now','-infinity', 'infinity' or a integer representing a POSIX timestamp
+    startTime
+    endTime
 
-		Examples:
-				getNodesFilter(nodelike="cut",status="ok")
-				getNodesFilter(nodelike=("cut","director"),status="dead")
-		"""
+    Examples:
+        getNodesFilter(nodelike="cut",status="ok")
+        getNodesFilter(nodelike=("cut","director"),status="dead")
+    """
 
-		keys = filt.keys()
-		joinStatus = (
-			"status" in keys or "statuslike" in keys or "user" in keys or "userlike" in keys)
-		joinProperty = ("property" in keys or "propertylike" in keys or
-                  "propvalue" in keys or "propvaluelike" in keys)
-		# or "user" in keys or "userlike" in keys)
-		sql = "select node.name from node"
-		if joinStatus:
-			sql += ", status, node_status"
-		if joinProperty:
-			sql += ", property, node_properties"
-		if len(keys) > 0:
-			sql += " where"
-		if joinStatus:
-			sql += " node.id = node_status.node_id and node_status.status_id = status.id"
-		if joinStatus and joinProperty:
-			sql += " and"
-		if joinProperty:
-			sql += " node.id = node_properties.node_id and node_properties.property_id = property.id"
-		if "node" in keys or "nodelike" in keys:
-			if joinStatus or joinProperty:
-				sql += " and"
-			if "node" in keys:
-				sql += " node.name = %(node)s"
-			else:
-				sql += " node.name like %(nodelike)s"
-		if "status" in keys:
-			sql += " and status.name = %(status)s"
-		elif "statuslike" in keys:
-			sql += " and status.name like %(statuslike)s"
-		if "property" in keys:
-			sql += " and property.name = %(property)s"
-		elif "propertylike" in keys:
-			sql += " and property.name like %(propertylike)s"
-		if "propvalue" in keys:
-			sql += " and node_properties.value = %(propvalue)s"
-		elif "propvaluelike" in keys:
-			sql += " and node_properties.value like %(propvaluelike)s"
-		if "user" in keys:
-			sql += " and node_status.user_id = (select id from users where username = %(user)s)"
-		elif "userlike" in keys:
-			sql += " and node_status.user_id = (select id from users where username like %(user)s)"
+    keys = list(filt.keys())
+    joinStatus = (
+        "status" in keys or "statuslike" in keys or "user" in keys or "userlike" in keys)
+    joinProperty = ("property" in keys or "propertylike" in keys
+                    or "propvalue" in keys or "propvaluelike" in keys)
+    # or "user" in keys or "userlike" in keys)
+    sql = "select node.name from node"
+    if joinStatus:
+      sql += ", status, node_status"
+    if joinProperty:
+      sql += ", property, node_properties"
+    if len(keys) > 0:
+      sql += " where"
+    if joinStatus:
+      sql += " node.id = node_status.node_id and node_status.status_id = status.id"
+    if joinStatus and joinProperty:
+      sql += " and"
+    if joinProperty:
+      sql += " node.id = node_properties.node_id and node_properties.property_id = property.id"
+    if "node" in keys or "nodelike" in keys:
+      if joinStatus or joinProperty:
+        sql += " and"
+      if "node" in keys:
+        sql += " node.name = %(node)s"
+      else:
+        sql += " node.name like %(nodelike)s"
+    if "status" in keys:
+      sql += " and status.name = %(status)s"
+    elif "statuslike" in keys:
+      sql += " and status.name like %(statuslike)s"
+    if "property" in keys:
+      sql += " and property.name = %(property)s"
+    elif "propertylike" in keys:
+      sql += " and property.name like %(propertylike)s"
+    if "propvalue" in keys:
+      sql += " and node_properties.value = %(propvalue)s"
+    elif "propvaluelike" in keys:
+      sql += " and node_properties.value like %(propvaluelike)s"
+    if "user" in keys:
+      sql += " and node_status.user_id = (select id from users where username = %(user)s)"
+    elif "userlike" in keys:
+      sql += " and node_status.user_id = (select id from users where username like %(user)s)"
 
-		return connPool.runQuery(sql, filt
-                           ).addCallback(lambda a: [i[0] for i in a]
-                                         ).addErrback(lambda msg: Failure(20, "getNodeFilter failed for %s" % (str(filt)), msg))
+    return connPool.runQuery(sql, filt
+                             ).addCallback(lambda a: [i[0] for i in a]
+                                           ).addErrback(lambda msg: Failure(20, "getNodeFilter failed for %s" % (str(filt)), msg))
 
-	xmlrpc_getNodesFilter.signature = [["struct", "array"]]
+  xmlrpc_getNodesFilter.signature = [["struct", "array"]]
 
-	# @dbRO
-	def xmlrpc_serverTime(self):
-		"""serverTime -> float
+  # @dbRO
+  def xmlrpc_serverTime(self):
+    """serverTime -> float
 
-		returns the current time of the server as a POSIX timestamp
-		"""
+    returns the current time of the server as a POSIX timestamp
+    """
 
-		return connPool.runQuery("select extract(epoch from now())::int4"
-                           ).addCallback(lambda a: a[0][0]
-                                         ).addErrback(lambda msg: Failure(20, "retrieving time failed ", msg))
-	xmlrpc_serverTime.signature = [["int"]]
+    return connPool.runQuery("select extract(epoch from now())::int4"
+                             ).addCallback(lambda a: a[0][0]
+                                           ).addErrback(lambda msg: Failure(20, "retrieving time failed ", msg))
+  xmlrpc_serverTime.signature = [["int"]]
 
 
 def daemonize(user=None, group=None):
-	import pwd
-	pid = os.fork()
-	if pid > 0:
-		sys.exit(0)
+  import pwd
+  pid = os.fork()
+  if pid > 0:
+    sys.exit(0)
 
-	os.chdir("/")
-	os.setsid()
-	os.umask(0)
+  os.chdir("/")
+  os.setsid()
+  os.umask(0)
 
-	pid = os.fork()
-	if pid > 0:
-		sys.exit(0)
+  pid = os.fork()
+  if pid > 0:
+    sys.exit(0)
 
-	sys.stdout.close()
-	sys.stderr.close()
-	os.close(0)
-	os.close(1)
-	os.close(2)
+  sys.stdout.close()
+  sys.stderr.close()
+  os.close(0)
+  os.close(1)
+  os.close(2)
 
-	if user:
-		os.seteuid(pwd.getpwnam(user)[2])
-	if group:
-		os.setegid(group)
+  if user:
+    os.seteuid(pwd.getpwnam(user)[2])
+  if group:
+    os.setegid(group)
 
 
 def delpid():
-	os.remove(master.config['mcp_pid_file'])
+  os.remove(master.config['mcp_pid_file'])
 
 
 def main():
-	"""Function to start up the server and serve the pages till the end of time."""
-	global connPool
-	global debug
+  """Function to start up the server and serve the pages till the end of time."""
+  global connPool
+  global debug
 
-	parser = OptionParser()
-	parser.add_option('-d', '--debug', action='store_true', dest='debug',
-                   help="Turn on debug mode.", default=False)
-	parser.add_option('-c', '--config', help='Main configuration file.',
-                   dest='config', default="")
-	parser.add_option('-p', '--privileged-config',
-                   help='Database configuration file location.',
-                   dest='privileged_conf', default="")
-	options, args_left = parser.parse_args()
+  parser = OptionParser()
+  parser.add_option('-d', '--debug', action='store_true', dest='debug',
+                    help="Turn on debug mode.", default=False)
+  parser.add_option('-c', '--config', help='Main configuration file.',
+                    dest='config', default="")
+  parser.add_option('-p', '--privileged-config',
+                    help='Database configuration file location.',
+                    dest='privileged_conf', default="")
+  options, args_left = parser.parse_args()
 
-	if options.debug:
-		debug = 1
-	if options.config != "":
-		master.config['config_file'] = options.config
-	if options.privileged_conf != '':
-		master.config['privileged_conf'] = options.privileged_conf
+  if options.debug:
+    debug = 1
+  if options.config != "":
+    master.config['config_file'] = options.config
+  if options.privileged_conf != '':
+    master.config['privileged_conf'] = options.privileged_conf
 
-	master.load_config()
-	master.load_privileged_config()
+  master.load_config()
+  master.load_privileged_config()
 
-	if not debug:
-		daemonize()
-	else:
-		master.debug = master.basicdebug
+  if not debug:
+    daemonize()
+  else:
+    master.debug = master.basicdebug
 
-	# Write PID file
-	if master.config['mcp_pid_file'] != None:
-		atexit.register(delpid)
-		pidfile = file(master.config['mcp_pid_file'], 'w+')
-		pidfile.write(str(os.getpid()))
-		pidfile.close()
+  # Write PID file
+  if master.config['mcp_pid_file'] != None:
+    atexit.register(delpid)
+    pidfile = open(master.config['mcp_pid_file'], 'w+')
+    pidfile.write(str(os.getpid()))
+    pidfile.close()
 
-	# TODO make numConnections configurable
-	connPool = adbapi.ConnectionPool(
-		"pgdb",
-		user=master.config["database_user"],
-		database=master.config["database_name"],
-		password=master.config["database_password"],
-		host=master.config["database_server"],
-		cp_reconnect=True,
-		cp_min=int(master.config["database_min_connections"]),
-		cp_max=int(master.config["database_max_connections"])
-	)
+  # TODO make numConnections configurable
+  connPool = adbapi.ConnectionPool(
+      "psycopg2",
+      user=master.config["database_user"],
+      dbname=master.config["database_name"],
+      password=master.config["database_password"],
+      host=master.config["database_server"],
+      cp_reconnect=True,
+      cp_min=int(master.config["database_min_connections"]),
+      cp_max=int(master.config["database_max_connections"])
+  )
 
-	# create an xmlrpc directory structure resource and put it in the master xmlrpc directory
-	m = MasterXMLRPCBase()
-	m.putSubHandler('master', MasterXMLRPCServer())
-	xmlrpc.addIntrospection(m)
-	root = resource.Resource()
-	root.putChild("RPC2", m)
+  # create an xmlrpc directory structure resource and put it in the master xmlrpc directory
+  m = MasterXMLRPCBase()
+  m.putSubHandler('master', MasterXMLRPCServer())
+  xmlrpc.addIntrospection(m)
+  root = resource.Resource()
+  root.putChild("RPC2", m)
 
-	# if we are configure to have a web interface create the resources and put it in the web directory
-	if master.config["web_interface"] == True:
-		root.putChild("web", MasterWebServer())
-		root.putChild("", ForwardToWeb())
+  # if we are configure to have a web interface create the resources and put it in the web directory
+  if master.config["web_interface"] == True:
+    root.putChild("web", MasterWebServer())
+    root.putChild("", ForwardToWeb())
 
-	# go
-	reactor.listenTCP(master.config["mcp_port"], server.Site(root))
-	reactor.run()
+  # go
+  #reactor.listenTCP(master.config["mcp_port"], server.Site(root))
+  endpoint = endpoints.TCP4ServerEndpoint(reactor, master.config["mcp_port"])
+  endpoint.listen(server.Site(m))
+  reactor.run()
 
 
 if __name__ == "__main__":
-	try:
-		main()
-	except KeyboardInterrupt:
-		pass
+  try:
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+    main()
+  except KeyboardInterrupt:
+    pass

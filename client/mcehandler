@@ -58,7 +58,7 @@
 
 import master
 from master import cluster_interface
-import xmlrpclib
+import xmlrpc.client
 import pwd
 import os
 import time
@@ -80,7 +80,7 @@ def main():
     if options.config:
         master.config['config_file'] = options.config
     master.load_config()
-    mcp = xmlrpclib.Server(master.config["server_url"])
+    mcp = xmlrpc.client.Server(master.config["server_url"])
     try:
         nodeList = expand_hostlist(options.node)
     except:
@@ -96,11 +96,11 @@ def main():
                           master.config['cluster_command_args'])
 
     operational_statuses = ['ok','allocated']
-	try:
-		status = mcp.master.getNodeStatus(nodeList)[nodeList[0]]
-	except KeyError:
-		# The node doesn't have a status yet, assume it is 'ok'
-		status = ('ok',)
+    try:
+        status = mcp.master.getNodeStatus(nodeList)[nodeList[0]]
+    except KeyError:
+        # The node doesn't have a status yet, assume it is 'ok'
+        status = ('ok',)
 
     if status[0] in operational_statuses:
         mcp.master.storeNodeEvent(nodeList, 'MCE',
@@ -127,7 +127,7 @@ def count_events(event_history, event_start):
     Returns a dictionary of {hostname: count} values
     """
     ret = {}
-    for node, logs in event_history.iteritems():
+    for node, logs in event_history.items():
         logs.sort(cmp = lambda x, y: cmp(float(y[1]),float(x[1])))
         dimm_counts = {}
         max_count = 0

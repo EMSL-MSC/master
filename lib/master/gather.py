@@ -58,7 +58,7 @@
 A library of hardware gathering functions
 
 FIXMES:
-	dont hardcode paths, but put in a config?
+  dont hardcode paths, but put in a config?
 
 """
 
@@ -73,166 +73,166 @@ verbs = {"gpu": nvidia.getAllGPUInfo}
 
 
 class FileMissingException(Exception):
-	pass
+  pass
 
 
 def verb(verbname):
-	def embedded(func):
-		verbs[verbname] = func
-		return func
-	return embedded
+  def embedded(func):
+    verbs[verbname] = func
+    return func
+  return embedded
 
 
 def fileGrab(file):
-	"""fileGrab(file) => list
+  """fileGrab(file) => list
 
-	Return a list of all lines in given file
-	"""
-	f = open(file, "r")
-	lines = f.readlines()
-	f.close()
-	return lines
+  Return a list of all lines in given file
+  """
+  f = open(file, "r")
+  lines = f.readlines()
+  f.close()
+  return lines
 
 # FIXME Do some sort of exception handling
 
 
 def lineGrab(file):
-	"""lineGrab(file) => string
+  """lineGrab(file) => string
 
-	Grab the first line of a given file
-	"""
-        if os.path.exists(file):
-                return fileGrab(file)[0].rstrip()
-        else:
-			raise FileMissingException(file)
+  Grab the first line of a given file
+  """
+  if os.path.exists(file):
+    return fileGrab(file)[0].rstrip()
+  else:
+    raise FileMissingException(file)
 
 
 def getMAC(interface):
-	"""getMAC(interface) => dictionary
+  """getMAC(interface) => dictionary
 
-	get the MAC address of a given network interface
-	"""
-	return {interface + '.mac': lineGrab("/sys/class/net/" + interface + "/address")}
+  get the MAC address of a given network interface
+  """
+  return {interface + '.mac': lineGrab("/sys/class/net/" + interface + "/address")}
 
 
 @verb("mac")
 def getAllMAC():
-	"""getALLMAC() => dictionary
-	Return
-	"""
+  """getALLMAC() => dictionary
+  Return
+  """
 
-	if not os.access("/sys/class/net/", os.F_OK):
-		return {}
-	ints = os.listdir("/sys/class/net/")
+  if not os.access("/sys/class/net/", os.F_OK):
+    return {}
+  ints = os.listdir("/sys/class/net/")
 
-	d = {}
-	for x in ints:
-		# dont scan loopback or ipv6 over ipv4 interface
-		if not x in ("lo", "sit0", "br0", "br1"):
-			d.update(getMAC(x))
-	return d
+  d = {}
+  for x in ints:
+    # dont scan loopback or ipv6 over ipv4 interface
+    if not x in ("lo", "sit0", "br0", "br1"):
+      d.update(getMAC(x))
+  return d
 
 
 def _getSGdevice(scsi_id):
-	"""_getSGdevice(scsi_id) => string
-	device - chan:target:id:lun string from
-	"""
+  """_getSGdevice(scsi_id) => string
+  device - chan:target:id:lun string from
+  """
 
-	try:
-		try:
-			return _getSGdevice.sg_map[scsi_id]
-		except AttributeError:
-			_getSGdevice.sg_map = {}
-			if not os.access('/usr/bin/sg_map', os.X_OK):
-				debug("failed to access sg_map or sg_inq " + str(e))
-				return {}
-			for line in os.popen("/usr/bin/sg_map -sd -x 2> /dev/null", "r"):
-				parts = line.split()
-				if len(parts) == 7:
-					(sg, c, t, i, l, type, dev) = parts
-					key = ":".join((c, t, i, l))
-					_getSGdevice.sg_map[key] = dev
-			return _getSGdevice.sg_map[scsi_id]
-	except KeyError:
-		return {}
+  try:
+    try:
+      return _getSGdevice.sg_map[scsi_id]
+    except AttributeError:
+      _getSGdevice.sg_map = {}
+      if not os.access('/usr/bin/sg_map', os.X_OK):
+        debug("failed to access sg_map or sg_inq " + str(e))
+        return {}
+      for line in os.popen("/usr/bin/sg_map -sd -x 2> /dev/null", "r"):
+        parts = line.split()
+        if len(parts) == 7:
+          (sg, c, t, i, l, type, dev) = parts
+          key = ":".join((c, t, i, l))
+          _getSGdevice.sg_map[key] = dev
+      return _getSGdevice.sg_map[scsi_id]
+  except KeyError:
+    return {}
 
 
 def getScsiInfo(scsi_id):
-	"""getScsiInfo(scsi_id) => dictionary
+  """getScsiInfo(scsi_id) => dictionary
 
-	scsi_id - chan:target:id:lun string from /sys/class/scsi_disk/
-	Retrieve model number, serial number and firmware revision of a scsi device
-	"""
-	mymap = {'Vendor identification': 'vendor',
-          'Product identification': 'model',
-          'Product revision level': 'fwver',
-          'Unit serial number': 'serial'
-          }
+  scsi_id - chan:target:id:lun string from /sys/class/scsi_disk/
+  Retrieve model number, serial number and firmware revision of a scsi device
+  """
+  mymap = {'Vendor identification': 'vendor',
+           'Product identification': 'model',
+           'Product revision level': 'fwver',
+           'Unit serial number': 'serial'
+           }
 
-	smartmap = {'Device Model': 'model',
-             'Firmware Version': 'fwver',
-             'Serial Number': 'serial'
-             }
+  smartmap = {'Device Model': 'model',
+              'Firmware Version': 'fwver',
+              'Serial Number': 'serial'
+              }
 
-	if not os.access("/usr/bin/sg_inq", os.X_OK):
-		debug("failed to access sg_map or sg_inq")
-		return {}
+  if not os.access("/usr/bin/sg_inq", os.X_OK):
+    debug("failed to access sg_map or sg_inq")
+    return {}
 
-	dev = _getSGdevice(scsi_id)
-	if not dev:
-		 debug("Failed to find a device for <" +
-		       scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
-		 return {}
-	prefix = "scsi." + scsi_id
-	p = os.popen("/usr/bin/sg_inq " + dev, "r")
-	infos = doLineParse(p, prefix, mymap)
+  dev = _getSGdevice(scsi_id)
+  if not dev:
+     debug("Failed to find a device for <" +
+           scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
+     return {}
+  prefix = "scsi." + scsi_id
+  p = os.popen("/usr/bin/sg_inq " + dev, "r")
+  infos = doLineParse(p, prefix, mymap)
 
-	try:
-		if infos[prefix + '.vendor'] == 'ATA' and os.access("/usr/sbin/smartctl", os.X_OK):
-			p = os.popen("/usr/sbin/smartctl -i " + dev, "r")
-			infos.update(doLineParse(p, prefix, smartmap))
+  try:
+    if infos[prefix + '.vendor'] == 'ATA' and os.access("/usr/sbin/smartctl", os.X_OK):
+      p = os.popen("/usr/sbin/smartctl -i " + dev, "r")
+      infos.update(doLineParse(p, prefix, smartmap))
 
-		if "PERC" in infos[prefix + ".model"]:
-			infos.update(dell.getAllPERCInfo())
+    if "PERC" in infos[prefix + ".model"]:
+      infos.update(dell.getAllPERCInfo())
 
-		if "AMCC" in infos[prefix + ".vendor"]:
-			infos.update(amcc.getAllAMCCInfo())
+    if "AMCC" in infos[prefix + ".vendor"]:
+      infos.update(amcc.getAllAMCCInfo())
 
-	except (IOError, KeyError):
-		pass  # if info doesn't have a vendor key or if we don't have a smartctl command
+  except (IOError, KeyError):
+    pass  # if info doesn't have a vendor key or if we don't have a smartctl command
 
-	return infos
+  return infos
 
 
 @verb("scsi")
 def getAllScsiInfo():
-	"""getAllScsiInfo() => dictionary
+  """getAllScsiInfo() => dictionary
 
-	retrive all information for scsi disks
-	"""
+  retrive all information for scsi disks
+  """
 
-	info = {}
-	if os.access("/sys/module/cciss", os.F_OK):
-		info.update(hp.getAllSmartArrayInfo())
+  info = {}
+  if os.access("/sys/module/cciss", os.F_OK):
+    info.update(hp.getAllSmartArrayInfo())
 
-	info.update(_callOnDirList("/sys/class/scsi_device/", getScsiInfo))
+  info.update(_callOnDirList("/sys/class/scsi_device/", getScsiInfo))
 
-	return info
+  return info
 
 # FIXME write a function signature
 
 
 def _callOnDirList(dir, func):
-	"""call a function on every file in a directory"""
+  """call a function on every file in a directory"""
 
-	if not os.access(dir, os.F_OK):
-		debug("failed to access " + dir)
-		return {}
-	entries = os.listdir(dir)
-	d = {}
-	for x in entries:
-		d.update(func(x))
-	return d
+  if not os.access(dir, os.F_OK):
+    debug("failed to access " + dir)
+    return {}
+  entries = os.listdir(dir)
+  d = {}
+  for x in entries:
+    d.update(func(x))
+  return d
 
 
 _ibbase = "/sys/class/infiniband/"
@@ -240,204 +240,205 @@ _ib = "infiniband."
 
 
 def getIBInfo(id):
-	"""retrieve information about a specific IB card"""
-	togather = [("fw_ver", "fwver"), ("node_guid", "guid"),
-             ("hca_type", "type"), ("board_id", "id")]
-	d = {}
-	for (file, key) in togather:
-		if os.access(_ibbase, os.R_OK):
-			try:
-				d[_ib + id + "." + key] = lineGrab(_ibbase + "/" + id + "/" + file)
-			except FileMissingException:
-				pass
-	return d
+  """retrieve information about a specific IB card"""
+  togather = [("fw_ver", "fwver"), ("node_guid", "guid"),
+              ("hca_type", "type"), ("board_id", "id")]
+  d = {}
+  for (file, key) in togather:
+    if os.access(_ibbase, os.R_OK):
+      try:
+        d[_ib + id + "." + key] = lineGrab(_ibbase + "/" + id + "/" + file)
+      except FileMissingException:
+        pass
+  return d
 
 
 def getDMIInfo():
-	info = {}
-	lines = os.popen('/usr/sbin/dmidecode').read()
-	lines = lines.split('\n')
-	category_map = {"0": {'name': "bios", 'keywords': ['Vendor', 'Version', 'Release Date']},
-                 "1": {'name': "system", 'keywords': ["Manufacturer", 'Product Name', 'Version', 'Serial Number', 'UUID']},
-                 "2": {'name': "chassis",
-                       'keywords': [
-                           "Manufacturer", 'Type', 'Lock',
-                           'Version', 'Serial Number', 'Asset Tag',
-                           'Height', 'Number Of Power Cords'
-                       ]
-                       },
-                 "17": {'name': 'dimm',
-                        'ident': "Locator",
+  info = {}
+  lines = os.popen('/usr/sbin/dmidecode').read()
+  lines = lines.split('\n')
+  category_map = {"0": {'name': "bios", 'keywords': ['Vendor', 'Version', 'Release Date']},
+                  "1": {'name': "system", 'keywords': ["Manufacturer", 'Product Name', 'Version', 'Serial Number', 'UUID']},
+                  "2": {'name': "chassis",
                         'keywords': [
-                            "Locator", "Serial Number", "Part Number",
-                            "Size", "Manufacturer"
+                            "Manufacturer", 'Type', 'Lock',
+                            'Version', 'Serial Number', 'Asset Tag',
+                            'Height', 'Number Of Power Cords'
                         ]
-                        }
-                 }
-	current_category = ''
-	keys = {}
-	for line in lines:
-		if line.startswith('Handle'):
-			# dump the collected keys
-			if keys:
-				for key, val in keys.items():
-					if 'ident' in category_map[current_category]:
-						if keys[category_map[current_category]['ident']]:
-							name_str = category_map[current_category]['name'] + \
-                                                            '.' + keys[category_map[current_category]['ident']] + \
-                                                            '.' + \
-                                                           	key.replace(
-                                                           		' ', '_').lower()
-						else:
-							name_str = ''  # dont set a key for things without a locator
-					else:
-						name_str = category_map[current_category]['name'] + \
-							'.' + key.replace(' ', '_').lower()
-					if name_str:
-						info[name_str] = val
-				keys = {}
+                        },
+                  "17": {'name': 'dimm',
+                         'ident': "Locator",
+                         'keywords': [
+                             "Locator", "Serial Number", "Part Number",
+                             "Size", "Manufacturer"
+                         ]
+                         }
+                  }
+  current_category = ''
+  keys = {}
+  for line in lines:
+    if line.startswith('Handle'):
+      # dump the collected keys
+      if keys:
+        for key, val in keys.items():
+          if 'ident' in category_map[current_category]:
+            if keys[category_map[current_category]['ident']]:
+              name_str = category_map[current_category]['name'] + \
+                  '.' + keys[category_map[current_category]['ident']] + \
+                  '.' + \
+                  key.replace(
+                  ' ', '_').lower()
+            else:
+              name_str = ''  # dont set a key for things without a locator
+          else:
+            name_str = category_map[current_category]['name'] + \
+                '.' + key.replace(' ', '_').lower()
+          if name_str:
+            info[name_str] = val
+        keys = {}
 
-			current_category = re.search("DMI type ([0-9]+),", line).group(1)
-			# print current_category
-			if current_category not in category_map:
-				current_category = ''
-				continue
-		if current_category:
-			test_line = line.strip()
-			for key_word in category_map[current_category]['keywords']:
-				if test_line.startswith(key_word):
-					keys[test_line.split(':')[0]] = test_line.split(':')[1].strip()
+      current_category = re.search("DMI type ([0-9]+),", line).group(1)
+      # print current_category
+      if current_category not in category_map:
+        current_category = ''
+        continue
+    if current_category:
+      test_line = line.strip()
+      for key_word in category_map[current_category]['keywords']:
+        if test_line.startswith(key_word):
+          keys[test_line.split(':')[0]] = test_line.split(':')[1].strip()
 
-	return info
+  return info
 
 
 @verb("ib")
 def getAllIBInfo():
-	"""Gather all IB card info"""
-	return _callOnDirList(_ibbase, getIBInfo)
+  """Gather all IB card info"""
+  return _callOnDirList(_ibbase, getIBInfo)
 
 
 @verb("system")
 def getSystemInfo():
-	"""getSystemInfo() -> dictionary
+  """getSystemInfo() -> dictionary
 
-	Gather System information such as kernel version, processor info, etc..
-	"""
+  Gather System information such as kernel version, processor info, etc..
+  """
 
-	d = {}
+  d = {}
 
-	d = dict(
-		list(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname())))
-	del(d['nodename'])
+  d = dict(
+      list(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname())))
+  del(d['nodename'])
 
-	d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
-                      {"MemTotal": "total", "SwapTotal": "swap"}))
+  d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
+                       {"MemTotal": "total", "SwapTotal": "swap"}))
 
-	if os.access('/proc/uptime', os.R_OK):
-		d['boot_time'] = int(time.mktime(time.localtime()) - float(
-                    open('/proc/uptime').read().split()[0]))
+  if os.access('/proc/uptime', os.R_OK):
+    d['boot_time'] = int(time.mktime(time.localtime()) - float(
+        open('/proc/uptime').read().split()[0]))
 
-	if os.access('/usr/sbin/dmidecode', os.X_OK):
-		d.update(getDMIInfo())
-	return d
+  if os.access('/usr/sbin/dmidecode', os.X_OK):
+    d.update(getDMIInfo())
+  return d
 
 
 @verb("mem")
 def getMemoryInfo():
-	"""getMemoryInfo() -> dictionary
+  """getMemoryInfo() -> dictionary
 
-	Gather detailed information about memory devices in the system
-	"""
-	return mem.getMemoryInfo()
+  Gather detailed information about memory devices in the system
+  """
+  return mem.getMemoryInfo()
 
 
 @verb("mic")
 def getIntelMICInfo():
-	"""getIntelMICInfo() -> dictionary
+  """getIntelMICInfo() -> dictionary
 
-		Gather information about the Intel MIC processors if they exist in the system"""
-	sysmap = {
-		"Driver Version": "driver_version",
-		"MPSS Version": "mpss_version"
-	}
-	micmap = {
-		"Flash Version": "flash_version",
-		"SMC Firmware Version": "smc_fw_version",
-		"SMC Boot Loader Version": "smc_boot_version",
-		"uOS Version": "uos_version",
-		"Device Serial Number": "serial",
-		"Coprocessor Stepping": "setepping",
-		"Board SKU": "sku",
-		"Total No of Active Cores": "cores"
-	}
+    Gather information about the Intel MIC processors if they exist in the system"""
+  sysmap = {
+      "Driver Version": "driver_version",
+      "MPSS Version": "mpss_version"
+  }
+  micmap = {
+      "Flash Version": "flash_version",
+      "SMC Firmware Version": "smc_fw_version",
+      "SMC Boot Loader Version": "smc_boot_version",
+      "uOS Version": "uos_version",
+      "Device Serial Number": "serial",
+      "Coprocessor Stepping": "setepping",
+      "Board SKU": "sku",
+      "Total No of Active Cores": "cores"
+  }
 
-	d = {}
-	if os.access(config["micinfo"], os.X_OK):
-		lines = os.popen(config["micinfo"]).readlines()
-		# find sections
-		devstart = []
-		for i in range(len(lines)):
-			if lines[i].startswith("Device No:"):
-				devstart.append(i)
-		if devstart:
-			d.update(doLineParse(lines[:devstart[0]], "mic", sysmap))
-		devstart.append(len(lines))
-		for i in range(len(devstart) - 1):
-			mic = lines[devstart[i]].split(' ')[-1].rstrip()
-			d.update(doLineParse(lines[devstart[i]:devstart[i + 1]], mic, micmap))
+  d = {}
+  if os.access(config["micinfo"], os.X_OK):
+    lines = os.popen(config["micinfo"]).readlines()
+    # find sections
+    devstart = []
+    for i in range(len(lines)):
+      if lines[i].startswith("Device No:"):
+        devstart.append(i)
+    if devstart:
+      d.update(doLineParse(lines[:devstart[0]], "mic", sysmap))
+    devstart.append(len(lines))
+    for i in range(len(devstart) - 1):
+      mic = lines[devstart[i]].split(' ')[-1].rstrip()
+      d.update(doLineParse(lines[devstart[i]:devstart[i + 1]], mic, micmap))
 
-	return d
+  return d
 
 
 @verb("bmc")
 def gatherBMCInfo():
-	d = {}
-	lanmap = {
-		"MAC Address": "mac",
-	}
-	mcmap = {
-		"Firmware Revision": "fwver",
-		"Manufacturer Name": "vendor",
-		"Product ID": "prodid",
-	}
-	frumap = {
-		"Product Asset Tag": "asset",
-	}
-	if os.access("/usr/bin/ipmitool", os.X_OK):
-		d = doLineParse(
-			os.popen("/usr/bin/ipmitool lan print").readlines(), "bmc", lanmap)
-		d.update(doLineParse(
-			os.popen("/usr/bin/ipmitool mc info").readlines(), "bmc", mcmap))
-		d.update(doLineParse(os.popen("/usr/bin/ipmitool fru").readlines(), "bmc", frumap))
-	return d
+  d = {}
+  lanmap = {
+      "MAC Address": "mac",
+  }
+  mcmap = {
+      "Firmware Revision": "fwver",
+      "Manufacturer Name": "vendor",
+      "Product ID": "prodid",
+  }
+  frumap = {
+      "Product Asset Tag": "asset",
+  }
+  if os.access("/usr/bin/ipmitool", os.X_OK):
+    d = doLineParse(
+        os.popen("/usr/bin/ipmitool lan print").readlines(), "bmc", lanmap)
+    d.update(doLineParse(
+        os.popen("/usr/bin/ipmitool mc info").readlines(), "bmc", mcmap))
+    d.update(doLineParse(
+        os.popen("/usr/bin/ipmitool fru").readlines(), "bmc", frumap))
+  return d
 
 
 @verb("all")
 def gatherALL():
-	d = {}
-	for (v, f) in list(verbs.items()):
-		if v != "all":
-			debug("Running <" + v + "> Verb")
-			d.update(f())
-	return d
+  d = {}
+  for (v, f) in list(verbs.items()):
+    if v != "all":
+      debug("Running <" + v + "> Verb")
+      d.update(f())
+  return d
 
 
 def _test():
-	global debug, verbs
+  global debug, verbs
 
-	def dbg(msg):
-		print("DEBUG:", msg)
-	debug = dbg
+  def dbg(msg):
+    print("DEBUG:", msg)
+  debug = dbg
 
-	print(verbs)
+  print(verbs)
 
-	d = verbs["all"]()
+  d = verbs["all"]()
 
-	keys = list(d.keys())
-	keys.sort()
-	for key in keys:
-		print(key, " => ", d[key])
+  keys = list(d.keys())
+  keys.sort()
+  for key in keys:
+    print(key, " => ", d[key])
 
 
 if __name__ == "__main__":
-	_test()
+  _test()

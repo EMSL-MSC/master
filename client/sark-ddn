@@ -10,7 +10,7 @@
 import socket
 import getopt
 import sys
-import xmlrpclib
+import xmlrpc.client
 import os
 import master.ef
 import master.sfa
@@ -54,7 +54,7 @@ def main():
 	optlist, args = getopt.getopt(sys.argv[1:], "c:a:m:vdh")
 
 	if args:
-		print "Extra Arguments Given:" + args
+		print("Extra Arguments Given:" + args)
 		return
 
 	for (arg, val) in optlist:
@@ -69,7 +69,7 @@ def main():
 		if arg == "-d":
 			master.debug = master.basicdebug
 		if arg == "-h":
-			print usage
+			print(usage)
 			return
 
 	master.load_config()
@@ -83,7 +83,7 @@ def main():
 
 	props = {}
 
-	mcp = xmlrpclib.Server(master.config["server_url"])
+	mcp = xmlrpc.client.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
 
 	arrays = {}
@@ -101,54 +101,54 @@ def main():
 	for arr in arrays:
 		props = arrays[arr]
 		if verbose:
-			print "Processing:", arr
+			print("Processing:", arr)
 
 		# check to see if node exists:
 		nodes = mcp.master.getNodes([arr])
 		if len(nodes) == 0:
-			print "Array node:", arr, "does not exist in database"
+			print("Array node:", arr, "does not exist in database")
 			continue
 
 		sprops = mcp.master.getNodeProperties([arr])
-		if sprops.has_key(arr):
+		if arr in sprops:
 			current = sprops[arr]
 		else:
 			if verbose:
-				print "Array node:", arr, "no  properties found"
+				print("Array node:", arr, "no  properties found")
 			current = []
 
 		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 		for k, v, ts, cmt in current:
-			if props.has_key(k) and props[k] == v:
+			if k in props and props[k] == v:
 				master.debug("deleting key <" + k
 				             + "> because it is already on the server")
 				del(props[k])
 
 		# Everything that is left needs to updated on the server
-		for k, v in props.items():
+		for k, v in list(props.items()):
 			try:
 				if verbose:
-					print "Adding", k, " => ", v
+					print("Adding", k, " => ", v)
 
 				res = mcp.master.updateNodeProperty(arr, k, v)
-				master.debug("updateNodeProperty: res = " + `res`)
-			except xmlrpclib.Fault, msg:
+				master.debug("updateNodeProperty: res = " + repr(res))
+			except xmlrpc.client.Fault as msg:
 				master.debug("Adding key <" + k + "> to db because:" + str(msg))
 
 				try:
 					res = mcp.master.addProperty(k, "Added by Sark on " + myname)
-					master.debug("addProperty: res=" + `res`)
-				except xmlrpclib.Fault:
-					print >>sys.stderr, "Error adding New property"
+					master.debug("addProperty: res=" + repr(res))
+				except xmlrpc.client.Fault:
+					print("Error adding New property", file=sys.stderr)
 					continue  # just move on
 
 				try:
 					res = mcp.master.updateNodeProperty(arr, k, v)
 					pass
-				except xmlrpclib.Fault, msg:
-					print >>sys.stderr, "Error adding " + k + " => " + v + ": " + str(msg)
+				except xmlrpc.client.Fault as msg:
+					print("Error adding " + k + " => " + v + ": " + str(msg), file=sys.stderr)
 
-			except Exception, msg:  # Will this ever happen
+			except Exception as msg:  # Will this ever happen
 				master.debug("Error updating property:" + k + ":" + str(msg))
 
 
