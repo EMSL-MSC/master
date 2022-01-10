@@ -131,19 +131,18 @@ def getSmartArraySlotInfo(slot):
          			'Firmware Revision': 'fwver',
 	}
 
-	lines = getlines("ctrl slot=" + slot + " show detail", getproc())
+	lines = getlines(f"ctrl slot={slot} show detail", getproc())
 	info = doLineParse(lines, 'smartarray.s' + slot, slotmap)
 
-	lines = getlines("ctrl slot=" + slot + " physicaldrive all show", getproc())
+	lines = getlines(f"ctrl slot={slot} physicaldrive all show", getproc())
 
 	findit = re.compile(".*physicaldrive ([^ ]*) .*")
 	for line in lines:
 		found = findit.match(line)
 		if found:
 			id = found.groups()[0]
-			lines = getlines("ctrl slot=" + slot +
-			                 "  physicaldrive " + id + " show", getproc())
-			info.update(doLineParse(lines, 'smartarray.s' + slot + '.' + id, drivemap))
+			lines = getlines(f"ctrl slot={slot}  physicaldrive {id} show", getproc())
+			info.update(doLineParse(lines, f'smartarray.s{slot}.{id}', drivemap))
 
 	return info
 
@@ -159,7 +158,7 @@ def getAllSmartArrayInfo():
 		found = findit.match(line)
 		if found:
 			type, slot = found.groups()
-			info['smartarray.s' + slot + '.type'] = type
+			info[f'smartarray.s{slot}.type'] = type
 			info.update(getSmartArraySlotInfo(slot))
 
 	killproc()
@@ -168,10 +167,8 @@ def getAllSmartArrayInfo():
 
 def _test():
 	d = getAllSmartArrayInfo()
-	keys = list(d.keys())
-	keys.sort()
-	for key in keys:
-		print(key, " => ", d[key])
+	for key in sorted(d.keys()):
+		print(f"{key} => {d[key]}")
 
 
 if __name__ == "__main__":

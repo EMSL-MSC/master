@@ -75,8 +75,7 @@ def getGPUInfo(id, uuid):
 	if not os.access("/usr/bin/nvidia-smi", os.X_OK):
 		return {}
 
-	p = os.popen("/usr/bin/nvidia-smi -i %s -q" %
-	             (uuid), "r")
+	p = os.popen(f"/usr/bin/nvidia-smi -i {uuid} -q", "r")
 	lines = p.readlines()
 	p.close()
 
@@ -106,7 +105,7 @@ def getAllGPUInfo():
 		if grp:
 			theid = grp.group(1).replace(" ", ".").lower()
 			uuid = grp.group(2)
-			debug("processing " + theid + " " + uuid)
+			debug(f"processing {theid} {uuid}")
 			infos.update(getGPUInfo(theid, uuid))
 
 	return infos
@@ -120,10 +119,8 @@ def _test():
 	debug = dbg
 
 	d = getAllGPUInfo()
-	keys = list(d.keys())
-	keys.sort()
-	for key in keys:
-		print(key, " => ", d[key])
+	for key in sorted(d.keys()):
+		print(f"{key} => {d[key]}")
 
 
 if __name__ == "__main__":

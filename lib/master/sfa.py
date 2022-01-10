@@ -153,7 +153,7 @@ def dumpProps(prefix, item, props):
 		except AttributeError:
 			# take the value as it stands
 			pass
-		d[prefix + "." + p] = str(v)
+		d[f"{prefix}.{p}"] = str(v)
 	return d
 
 
@@ -170,8 +170,7 @@ def dumpDisks():
 	d = {}
 	list = SFADiskDrive.getAll()
 	for item in list:
-		p = "enclosure" + str(item.EnclosureIndex) + \
-                    ".disk" + str(item.DiskSlotNumber)
+		p = f"enclosure{str(item.EnclosureIndex)}.disk{str(item.DiskSlotNumber)}"
 		d.update(dumpProps(p, item, _diskProps))
 	return d
 
@@ -180,8 +179,7 @@ def dumpEncPart(cls, prefix, props):
 	d = {}
 	list = cls.getAll()
 	for item in list:
-		p = "enclosure" + str(item.EnclosureIndex) + "." + \
-                    prefix + str(item.Position)
+		p = f"enclosure{str(item.EnclosureIndex)}.{prefix}{str(item.Position)}"
 		d.update(dumpProps(p, item, props))
 	return d
 

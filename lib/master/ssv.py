@@ -79,7 +79,7 @@ def getSSVDicts(fileobj):
 
     headers = line.split(";")
 
-    return [(dict(list(zip(headers, line.split(";"))))) for line in fileobj if len(line) > 1]
+    return [(dict(zip(headers, line.split(";")))) for line in fileobj if len(line) > 1]
 
 
 def _test():
