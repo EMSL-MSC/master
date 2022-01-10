@@ -162,7 +162,7 @@ def load_config_file(param):
     try:
         crap = {}
         exec(open(config[param]).read(), crap, config)
-        for (k, v) in list(config.items()):
-          debug("Config: " + str(k) + " => " + str(v))
+        for (k, v) in config.items():
+          debug(f"Config: {str(k)} => {str(v)}")
     except IOError:
-        debug("Error Loading Config file: " + config["config_file"])
+        debug(f"Error Loading Config file: {config['config_file']}")

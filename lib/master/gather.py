@@ -112,7 +112,7 @@ def getMAC(interface):
 
   get the MAC address of a given network interface
   """
-  return {interface + '.mac': lineGrab("/sys/class/net/" + interface + "/address")}
+  return {interface + '.mac': lineGrab(f"/sys/class/net/{interface}/address")}
 
 
 @verb("mac")
@@ -180,8 +180,7 @@ def getScsiInfo(scsi_id):
 
   dev = _getSGdevice(scsi_id)
   if not dev:
-     debug("Failed to find a device for <" +
-           scsi_id + "> MAP:" + repr(_getSGdevice.sg_map))
+     debug(f"Failed to find a device for <{scsi_id}> MAP:{repr(_getSGdevice.sg_map)}")
      return {}
   prefix = "scsi." + scsi_id
   p = os.popen("/usr/bin/sg_inq " + dev, "r")
@@ -326,8 +325,7 @@ def getSystemInfo():
 
   d = {}
 
-  d = dict(
-      list(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname())))
+  d = dict(zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname()))
   del(d['nodename'])
 
   d.update(doLineParse(open("/proc/meminfo", "r"), "mem",
@@ -416,9 +414,9 @@ def gatherBMCInfo():
 @verb("all")
 def gatherALL():
   d = {}
-  for (v, f) in list(verbs.items()):
+  for (v, f) in verbs.items():
     if v != "all":
-      debug("Running <" + v + "> Verb")
+      debug(f"Running <{v}> Verb")
       d.update(f())
   return d
 
@@ -434,10 +432,8 @@ def _test():
 
   d = verbs["all"]()
 
-  keys = list(d.keys())
-  keys.sort()
-  for key in keys:
-    print(key, " => ", d[key])
+  for key in sorted(d.keys()):
+    print(f"{key} => {d[key]}")
 
 
 if __name__ == "__main__":

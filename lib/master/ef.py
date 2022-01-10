@@ -67,7 +67,7 @@ _PSUPhysicalPackageProps = (
 
 
 def emit(key, value):
-	print(key, "=", value)
+	print(f"{key}={value}")
 
 
 def main():
@@ -86,9 +86,9 @@ def dumpKeys(code=False):
 	for c in (Controller, DiskSoftwareIdentity, ControllerSoftwareIdentity, DiskDrive, Volume, PSU, PSUFan, DiskExtent, DiskSASPort, SASPort, TopComputerSystemProduct, FCPort, PSUPhysicalPackage):
 		item = c.getAll()[0]
 		if code:
-			print("_" + item.cimName[4:] + "Props = (")
-			for k in list(c.cimProps.keys()):
-				print("\t'" + k + "'")
+			print(f"_{item.cimName[4:]}Props = (")
+			for k in c.cimProps.keys():
+				print(f"\t'{k}'")
 			print(")")
 		else:
 			print(c)
@@ -152,7 +152,7 @@ def gatherEFInfo(hostlist, user, password):
 
 	for host in hostlist:
 		try:
-			APIConnect("https://" + host, auth=(user, password))
+			APIConnect(f"https://{host}", auth=(user, password))
 			d.update(dumpControllers())
 			d.update(dumpSimple(DiskSoftwareIdentity, "", _DiskSoftwareIdentityProps))
 			d.update(dumpSimple(DiskDrive, "", _DiskDriveProps))

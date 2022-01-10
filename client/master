@@ -122,8 +122,7 @@ def dt(epoch):
   try:
     return strftime("%F %T", localtime(epoch))
   except TypeError as msg:
-    master.debug("Failed to convert epoch: <"
-                 + str(epoch) + "> to string:" + str(msg))
+    master.debug(f"Failed to convert epoch: <{str(epoch)}> to string: {str(msg)}")
     return "unknown"
 
 # Procedure:
@@ -218,8 +217,7 @@ def main():
       try:
         all_limit = int(val)
       except ValueError:
-        print("ERROR: argument to -f must be an integer: %s" %
-              val, file=sys.stderr)
+        print(f"ERROR: argument to -f must be an integer: {val}", file=sys.stderr)
 
     if arg == '-L':
       showStatus = True
@@ -338,15 +336,11 @@ def main():
   elif listEvents:
     elog = None
     if start_date or end_date:
-      master.debug("Calling getNodeEventHistory(%s,False,%s,%s)" % (
-          nodeList,
-          start_date,
-          end_date))
+      master.debug(f"Calling getNodeEventHistory({nodeList},False,{start_date},{end_date})")
       elog = mcp.master.getNodeEventHistory(nodeList, False,
                                             start_date, end_date)
     else:
-      master.debug("Calling getNodeEventHistory(%s)" % (
-          nodeList))
+      master.debug(f"Calling getNodeEventHistory({nodeList})")
       elog = mcp.master.getNodeEventHistory(nodeList)
     master.debug("Result of getNodeEventHistory:" + str(elog))
     if elog:
@@ -378,17 +372,16 @@ def main():
   elif showProperty:
     res = mcp.master.getNodeProperties(nodeList)
     if res:
-      for node, props in list(res.items()):
+      for node, props in res.items():
         print(node + ":")
         for l in props:
-          print(" ", dt(l[2]), ":", l[0], "=", l[1], "   ", l[3])
+          print(f" {dt(l[2])}:{l[0]}={l[1]}   {l[3]}")
 
   elif showStatus:
     res = mcp.master.getNodeStatus(nodeList)
     if res:
-      for node, stats in list(res.items()):
-        print(node +
-              ":", dt(stats[1]), ":", stats[0], "by", stats[2], "   C:", stats[3])
+      for node, stats in res.items():
+        print(f"{node}:{dt(stats[1])}:{stats[0]}by{stats[2]}   C:{stats[3]}")
 
   elif statusValue:
     try:
@@ -416,18 +409,17 @@ def main():
   elif showAllStatuses:
     try:
       stati = mcp.master.getStatus()
-      for k, v in list(stati.items()):
-        print(k, ":", v)
+      for k, v in stati.items():
+        print(f"{k}:{v}")
     except xmlrpc.client.Fault as e:
       print("Error Listing Statuses:", e, file=sys.stderr)
 
   elif property:
     for node in nodeList:
-      master.debug("setting <" + node + "> property <"
-                   + property + "> to <" + propertyValue + ">")
+      master.debug(f"setting <{node}> property <{property}> to <{propertyValue}>")
       try:
         res = mcp.master.updateNodeProperty(node, property, propertyValue)
-        master.debug("updateNodeProperty: res = " + repr(res))
+        master.debug(f"updateNodeProperty: res = {repr(res)}")
       except xmlrpc.client.Fault as e:
         print("Error Setting Property:", e, file=sys.stderr)
 
@@ -450,11 +442,9 @@ def print_time_ordered_logs(logs, all, all_limit, log_type):
                                 (y[2], sorted_nodes.index(y[0]))))
   for log in ret:
     if log_type == 'property':
-      print("%s %s: %s=%s   %s" % (log[0],
-                                   dt(log[3]), log[1], log[2], log[4]))
+      print(f"{log[0]} {dt(log[3])}: {log[1]}={log[2]}   {log[4]}")
     else:
-      print("%s %s: %s by %s   C: %s" % (log[0], dt(log[2]), log[1],
-                                         log[3], log[4]))
+      print(f"{log[0]} {dt(log[2])}: {log[1]} by {log[3]}   C: {log[4]}")
 
 
 def print_logs(input_logs, all, all_limit, log_type):
@@ -467,10 +457,9 @@ def print_logs(input_logs, all, all_limit, log_type):
     for l in logs:
       master.debug(str(l))
       if log_type == "property":
-        print("  %s: %s = %s     %s" % (dt(l[2]), l[0], l[1], l[3]))
+        print(f"  {dt(l[2])}: {l[0]} = {l[1]}     {l[3]}")
       else:
-        print("  %s: %s by %s   C: %s" % (dt(l[1]),
-                                          l[0], l[2], l[3]))
+        print(f"  {dt(l[1])}: {l[0]} by {l[2]}   C: {l[3]}")
 
 
 if __name__ == "__main__":

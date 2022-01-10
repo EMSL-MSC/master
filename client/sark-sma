@@ -161,7 +161,7 @@ def main():
 		# check to see if node exists:
 		nodes = mcp.master.getNodes([hsv])
 		if len(nodes) == 0:
-			print("hsv node:", hsv, "does not exist in database")
+			print(f"hsv node: {hsv} does not exist in database")
 			continue
 
 		sprops = mcp.master.getNodeProperties([hsv])
@@ -169,26 +169,25 @@ def main():
 			current = sprops[hsv]
 		else:
 			if verbose:
-				print("hsv node:", hsv, "no  properties found")
+				print(f"hsv node: {hsv} no  properties found")
 			current = []
 
 		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 		for k, v, ts, cmt in current:
 			if k in props and props[k] == v:
-				master.debug("deleting key <" + k +
-				             "> because it is already on the server")
+				master.debug(f"deleting key <{k}> because it is already on the server")
 				del(props[k])
 
 		# Everything that is left needs to updated on the server
-		for k, v in list(props.items()):
+		for k, v in props.items():
 			try:
 				if verbose:
-					print("Adding", k, " => ", v)
+					print(f"Adding {k} => {v}")
 
 				res = mcp.master.updateNodeProperty(hsv, k, v)
 				master.debug("updateNodeProperty: res = " + repr(res))
 			except xmlrpc.client.Fault as msg:
-				master.debug("Adding key <" + k + "> to db because:" + str(msg))
+				master.debug(f"Adding key <{k}> to db because:{str(msg)}")
 
 				try:
 					res = mcp.master.addProperty(k, "Added by Sark on " + myname)
@@ -201,10 +200,10 @@ def main():
 					res = mcp.master.updateNodeProperty(hsv, k, v)
 					pass
 				except xmlrpc.client.Fault as msg:
-					print("Error adding " + k + " => " + v + ": " + str(msg), file=sys.stderr)
+					print(f"Error adding {k} => {v}: {str(msg)}", file=sys.stderr)
 
 			except Exception as msg:  # Will this ever happen
-				master.debug("Error updating property:" + k + ":" + str(msg))
+				master.debug(f"Error updating property:{k}:{str(msg)}")
 
 
 if __name__ == "__main__":
