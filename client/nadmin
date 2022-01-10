@@ -136,11 +136,11 @@ def main():
                 elif state in ("down", "drain"):
                     args['-o'] = ''
                 else:
-                    print("Unkown state passed: %s" % state)
+                    print(f"Unkown state passed: {state}")
                     print(usage)
                     sys.exit(1)
             else:
-                print("extra option passed: %s" % arg)
+                print(f"extra option passed: {arg}")
                 print(usage)
                 sys.exit(1)
 

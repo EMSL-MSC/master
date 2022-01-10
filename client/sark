@@ -132,10 +132,10 @@ def main():
 	master.debug(str(master.gather.verbs))
 	for mod in master.config["sark_modules"]:
 		try:
-			master.debug("Processing <" + mod + "> verb")
+			master.debug(f"Processing <{mod}> verb")
 			props.update(master.gather.verbs[mod]())
 		except KeyError:
-			master.debug("Error processing <" + mod + "> verb")
+			master.debug(f"Error processing <{mod}> verb")
 
 	mcp = xmlrpc.client.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
@@ -148,23 +148,23 @@ def main():
 
 	for k, v, ts, cmt in current:
 		if k in props and props[k] == v:
-			master.debug("deleting key <" + k + "> because it is already on the server")
+			master.debug(f"deleting key <{k}> because it is already on the server")
 			del(props[k])
 
 	# Everything that is left needs to updated on the server
-	for k, v in list(props.items()):
+	for k, v in props.items():
 		try:
 			if verbose:
-				print("Adding", k, " => ", v)
+				print(f"Adding{k} => {v}")
 
 			res = mcp.master.updateNodeProperty(myname, k, v)
-			master.debug("updateNodeProperty: res = " + repr(res))
+			master.debug(f"updateNodeProperty: res = {repr(res)}")
 		except xmlrpc.client.Fault as msg:
-			master.debug("Adding key <" + k + "> to db because:" + str(msg))
+			master.debug(f"Adding key <{k}> to db because:{str(msg)}")
 
 			try:
 				res = mcp.master.addProperty(k, "Added by Sark on " + myname)
-				master.debug("addProperty: res=" + repr(res))
+				master.debug(f"addProperty: res={repr(res)}")
 			except xmlrpc.client.Fault:
 				print("Error adding New property", file=sys.stderr)
 				continue  # just move on
@@ -172,10 +172,10 @@ def main():
 			try:
 				res = mcp.master.updateNodeProperty(myname, k, v)
 			except xmlrpc.client.Fault as msg:
-				print("Error adding " + k + " => " + v + ": " + str(msg), file=sys.stderr)
+				print(f"Error adding {k} => {v}: {str(msg)}", file=sys.stderr)
 
 		except Exception as msg:  # Will this ever happen
-			master.debug("Error updating property:" + k + ":" + str(msg))
+			master.debug(f"Error updating property:{k}:{str(msg)}")
 
 
 if __name__ == "__main__":

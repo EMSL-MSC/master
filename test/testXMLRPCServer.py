@@ -138,28 +138,28 @@ def try_call(function, args, result):
 	try:
 		retval = function(*args)
 	except xmlrpc.client.ProtocolError as inst:
-		print("ProtocolError: - %s" % inst)
+		print(f"ProtocolError: - {inst}")
 	except xmlrpc.client.ResponseError as inst:
-		print("ResponseError: - %s" % inst)
+		print(f"ResponseError: - {inst}")
 	except xmlrpc.client.Fault as inst:
-		print("Fault: - %s" % inst)
+		print(f"Fault: - {inst}")
 		retval = xmlrpc.client.Fault
 	except Exception as inst:
-		print("Unexpected error: %s" % inst)
+		print(f"Unexpected error: {inst}")
 		raise
 
-	str = "%s(%s)" % (function._Method__name, args)
+	str = f"{function._Method__name}({args})"
 	spcs = 100 - len(str)
 	print(str, " " * spcs, end=' ')
 	if retval == result:
-		print("Success: %s" % repr(retval))
+		print(f"Success: {repr(retval)}")
 	elif type(retval) == type({}) and type(result) == type({}):
 		if list(result.keys()) == list(retval.keys()):
 			print("Success")
 		else:
 			print("Dictionary Failure", result, retval)
 	else:
-		print("Error retval == %s" % repr(retval))
+		print(f"Error retval == {repr(retval)}")
 
 	return retval
 

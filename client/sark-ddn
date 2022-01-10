@@ -54,7 +54,7 @@ def main():
 	optlist, args = getopt.getopt(sys.argv[1:], "c:a:m:vdh")
 
 	if args:
-		print("Extra Arguments Given:" + args)
+		print(f"Extra Arguments Given:{args}")
 		return
 
 	for (arg, val) in optlist:
@@ -88,11 +88,11 @@ def main():
 
 	arrays = {}
 	for arr in master.config["ddn_arrays"].split(","):
-		hostlist = master.config["ddn_" + arr + "_hosts"].split(",")
-		user = master.config["ddn_" + arr + "_user"]
-		passwd = master.config["ddn_" + arr + "_pass"]
-		type = master.config["ddn_" + arr + "_type"]
-		master.debug("Array Info:%s %s %s %s" % (hostlist, user, passwd, type))
+		hostlist = master.config[f"ddn_{arr}_hosts"].split(",")
+		user = master.config[f"ddn_{arr}_user"]
+		passwd = master.config[f"ddn_{arr}_pass"]
+		type = master.config[f"ddn_{arr}_type"]
+		master.debug(f"Array Info:{hostlist} {user} {passwd} {type}")
 		if type == "ef":
 			arrays[arr] = master.ef.gatherEFInfo(hostlist, user, passwd)
 		if type == "sfa":
@@ -106,7 +106,7 @@ def main():
 		# check to see if node exists:
 		nodes = mcp.master.getNodes([arr])
 		if len(nodes) == 0:
-			print("Array node:", arr, "does not exist in database")
+			print(f"Array node: {arr} does not exist in database")
 			continue
 
 		sprops = mcp.master.getNodeProperties([arr])
@@ -114,26 +114,25 @@ def main():
 			current = sprops[arr]
 		else:
 			if verbose:
-				print("Array node:", arr, "no  properties found")
+				print(f"Array node: {arr} no  properties found")
 			current = []
 
 		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 		for k, v, ts, cmt in current:
 			if k in props and props[k] == v:
-				master.debug("deleting key <" + k
-				             + "> because it is already on the server")
+				master.debug(f"deleting key <{k}> because it is already on the server")
 				del(props[k])
 
 		# Everything that is left needs to updated on the server
-		for k, v in list(props.items()):
+		for k, v in props.items():
 			try:
 				if verbose:
-					print("Adding", k, " => ", v)
+					print(f"Adding {k} => {v}")
 
 				res = mcp.master.updateNodeProperty(arr, k, v)
-				master.debug("updateNodeProperty: res = " + repr(res))
+				master.debug(f"updateNodeProperty: res = {repr(res)}")
 			except xmlrpc.client.Fault as msg:
-				master.debug("Adding key <" + k + "> to db because:" + str(msg))
+				master.debug(f"Adding key <{k}> to db because:{str(msg)}")
 
 				try:
 					res = mcp.master.addProperty(k, "Added by Sark on " + myname)
@@ -146,10 +145,10 @@ def main():
 					res = mcp.master.updateNodeProperty(arr, k, v)
 					pass
 				except xmlrpc.client.Fault as msg:
-					print("Error adding " + k + " => " + v + ": " + str(msg), file=sys.stderr)
+					print(f"Error adding {k} => {v}: {str(msg)}", file=sys.stderr)
 
 			except Exception as msg:  # Will this ever happen
-				master.debug("Error updating property:" + k + ":" + str(msg))
+				master.debug(f"Error updating property:{k}:{str(msg)}")
 
 
 if __name__ == "__main__":

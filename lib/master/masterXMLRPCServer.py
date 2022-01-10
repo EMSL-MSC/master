@@ -35,7 +35,7 @@ class MasterXMLRPCServer(xmlrpc.server.SimpleXMLRPCServer):
 
 	def serve_forever(self):
 		for i in self.functions:
-			self.register_function(i, "master.%s" % i.__name__)
+			self.register_function(i, f"master.{i.__name__}")
 		self.register_introspection_functions()
 		xmlrpc.server.SimpleXMLRPCServer.serve_forever(self)
 

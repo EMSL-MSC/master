@@ -123,7 +123,7 @@ class smamgr:
 		e = myelementtree.fromstring(self.runcmdstoxml("ls system full xml"))
 		for o in e.getiterator("object"):
 			d = {}
-			for k, v in list(map.items()):
+			for k, v in map.items():
 				d[v] = o.find(k).text
 
 			d.update(self.getcontrollerinfo(o.findtext("objectname")))
@@ -141,15 +141,14 @@ class smamgr:
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls vdisk full xml"))
+			f"select cell {hsvname}", "ls vdisk full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
 			e = o.findtext("familyname")
-			prefix = e + "."
 
 			for k, v in list(map.items()):
-				d[prefix + v] = o.findtext(k)
+				d[f"{e}.{v}"] = o.findtext(k)
 
 		return d
 
@@ -162,7 +161,7 @@ class smamgr:
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls diskshelf full xml"))
+			f"select cell {hsvname}", "ls diskshelf full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
@@ -173,7 +172,7 @@ class smamgr:
 				e = "UnknownDiskShelf_" + o.findtext("wwnodename")
 			prefix = e + "."
 
-			for k, v in list(map.items()):
+			for k, v in map.items():
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("powersupplies/powersupply"):
@@ -217,7 +216,7 @@ class smamgr:
 				c = "UnknownDisk_" + o.findtext("nodewwid")
 			prefix = c + "."
 
-			for k, v in list(map.items()):
+			for k, v in map.items():
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("loops/loop"):
@@ -235,7 +234,7 @@ class smamgr:
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls controller full xml"))
+			f"select cell {hsvname}", "ls controller full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
@@ -243,7 +242,7 @@ class smamgr:
 			c = c.replace("Controller ", "controller")
 			prefix = c + "."
 
-			for k, v in list(map.items()):
+			for k, v in map.items():
 				d[prefix + v] = o.findtext(k)
 
 			for e in o.findall("fans/fan"):
@@ -285,7 +284,7 @@ if __name__ == "__main__":
 	s = smamgr(sys.argv[1], sys.argv[3], sys.argv[2],
             master.config['sma_username'], master.config['sma_password'])
 
-	for k, v in list(s.gethsvinfo().items()):
+	for k, v in s.gethsvinfo().items():
 		print(k)
-		for dk, dv in list(v.items()):
+		for dk, dv in v.items():
 			print("\t", dk, dv)

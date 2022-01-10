@@ -140,22 +140,22 @@ def getControllerDiskInfo(id):
 	if not os.access("/usr/bin/tw_cli", os.X_OK):
 		return {}
 
-	p = os.popen("/usr/bin/tw_cli /" + id + " show all", "r")
+	p = os.popen(f"/usr/bin/tw_cli /{id} show all", "r")
 	clines = []
 	ports = []
 	for l in p.readlines():
 		found = findit_p.match(l)
 		if found:
 			ports += [found.groups()[0]]
-		if l.find("/" + id) == 0:
+		if l.find(f"/{id}") == 0:
 			clines.append(l[len(id) + 2:])
 	p.close()
 
 	info.update(doLineParse(clines, "amcc." + id, cmap, "="))
 
 	for port in ports:
-		name = "/%s/%s" % (id, port)
-		p = os.popen("/usr/bin/tw_cli " + name + " show all", "r")
+		name = f"/{id}/{port}"
+		p = os.popen(f"/usr/bin/tw_cli {name} show all", "r")
 		plines = [l[len(name) + 1:] for l in p.readlines() if l.startswith(name)]
 
 		info.update(doLineParse(plines, "amcc" + name.replace("/", "."), cmap, "="))
@@ -191,7 +191,7 @@ def _test():
 	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print(key, " => ", d[key])
+		print(f"{key} => {d[key]}")
 
 
 if __name__ == "__main__":
