@@ -36,7 +36,7 @@ build-centos7:
   tags:
     - docker
 
-build-ubuntu1804:
+build-ubuntu2004:
   stage: build
   script:
     - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
