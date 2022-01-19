@@ -1,11 +1,14 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
+
+ENV TZ=America/Los_Angeles
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update
 #RUN apt-get install -y python python-hostlist python-twisted-core python-twisted-names python-twisted-web postgresql-python pexpect
-RUN apt-get install -y python python-twisted-core python-twisted-names python-twisted-web python-pexpect python-stdeb
+RUN apt-get install -y python3 python3-twisted python3-pexpect python3-stdeb python-all
 RUN apt-get install -y dh-python
 
 COPY . /app
 
-CMD cd /app && python setup.py  --command-packages=stdeb.command bdist_deb && cp deb_dist/*.deb dist
+CMD cd /app && python3 setup.py  --command-packages=stdeb.command bdist_deb && cp deb_dist/*.deb dist
