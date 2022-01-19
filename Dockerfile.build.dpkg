@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-MAINTAINER evan.felix@pnl.gov
+LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
 
 RUN apt-get update
 #RUN apt-get install -y python python-hostlist python-twisted-core python-twisted-names python-twisted-web postgresql-python pexpect

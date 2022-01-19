@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = "bento/centos-7.3"
+  config.vm.box = "bento/centos-7.9"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -70,20 +70,23 @@ Vagrant.configure("2") do |config|
   # SHELL
   config.vm.provision "shell", inline: <<-SHELL
     yum clean metadata
+    yum install -y wget curl
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    yum install -y postgresql-server python-ply python-pip gcc python-devel PyGreSQL
+    yum install -y postgresql-server python36-ply python36-pip gcc python36-devel postgresql-devel
     postgresql-setup initdb
-    echo -e 'host master master ::1/128 trust\nlocal all all peer\n' > /var/lib/pgsql/data/pg_hba.conf
+    echo -e 'host master master ::1/128 trust\nlocal master master trust\nlocal all all peer\n' > /var/lib/pgsql/data/pg_hba.conf
     systemctl restart postgresql
     su - postgres -c 'createuser master'
     su - postgres -c 'createdb -O master master'
     cd /vagrant/
     psql master -U master < server/master.sql
     psql master -U master < server/master-data.sql
-    pip install service_identity
-    pip install Twisted
-    pip install python-hostlist
-    yum install -y /vagrant/master-0.11-1.noarch.rpm
+    pip3 install --upgrade pip
+    pip3 install service_identity
+    pip3 install Twisted
+    pip3 install python-hostlist
+
+    yum install -y /vagrant/dist/master-0.18-1.noarch.rpm
     systemctl start master-mcp
   SHELL
 end

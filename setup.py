@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # vim: noet:ts=4:sw=4
 
 #from setuptools import setup,find_packages
@@ -85,7 +85,7 @@ setup(name='master', version='0.18',
       author="Evan Felix",
       author_email="e@pnl.gov",
       description="An asset managment system, designed to watch the cluster and also manage its state",
-      url="https://cvs.pnl.gov/mscf/wiki/MASTER",
+      url="https://gitlab.emsl.pnl.gov/msc_ops/master",
       package_dir={'master': 'lib/master'},
       packages=['master'],
       # distclass=svnDistribution,
