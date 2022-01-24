@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: latin-1 -*-
 # -*- coding: UTF-8 -*-
 # vim: et:ts=4:sw=4
@@ -65,7 +65,7 @@ import time
 import sys
 import socket
 import getopt
-import xmlrpclib
+import xmlrpc.client
 import os
 import master.cluster_interface
 import master
@@ -89,7 +89,7 @@ nadmin - Node administration utility.
     Alternative Slurm Formatted Options:
         Options can alternatively be passed in a slurm format. They must occur
         at the end of the option list after the update command.
-        
+
         NodeName=                       A list of nodes to perform the action on.
         Reason=                         A comment for the action.
         State=Down or State=Drain       Remove Nodes From Use.
@@ -106,12 +106,12 @@ def main():
         (options, argsleft) = getopt.getopt(
             sys.argv[1:], 'hr:w:iocm:dl', ['config=', 'history'])
     except getopt.GetoptError:
-        print usage
+        print(usage)
         sys.exit(1)
     args = dict(options)
 
     if '-h' in args:
-        print usage
+        print(usage)
         sys.exit(0)
 
     if '-d' in args:
@@ -126,28 +126,28 @@ def main():
     if len(argsleft) > 0 and argsleft[0].lower() == "update":
         for arg in argsleft[1:]:
             if arg.lower().startswith("nodename=") or arg.lower().startswith("node="):
-                args['-w'] =  arg[arg.find("=")+1:]
+                args['-w'] = arg[arg.find("=") + 1:]
             elif arg.lower().startswith("reason="):
-                args['-r'] =  arg[arg.find("=")+1:]
+                args['-r'] = arg[arg.find("=") + 1:]
             elif arg.lower().startswith("state="):
-                state = arg[arg.find("=")+1:].lower()
+                state = arg[arg.find("=") + 1:].lower()
                 if state in ("resume", "idle"):
                     args['-i'] = ''
-                elif state in("down", "drain"):
+                elif state in ("down", "drain"):
                     args['-o'] = ''
                 else:
-                    print "Unkown state passed: %s" % state
-                    print usage
+                    print(f"Unkown state passed: {state}")
+                    print(usage)
                     sys.exit(1)
             else:
-                print "extra option passed: %s" % arg
-                print usage
+                print(f"extra option passed: {arg}")
+                print(usage)
                 sys.exit(1)
 
     try:
         mcp = setup_mcp(args)
     except:
-        print "Error connecting to the mcp."
+        print("Error connecting to the mcp.")
         sys.exit(2)
 
     clusterCommands = getattr(master.cluster_interface, master.config['cluster_commands'])(
@@ -165,54 +165,54 @@ def main():
             if len(maintnodes) > 0:
                 print_maint_nodes(mcp, maintnodes, HISTORY)
             else:
-                print "No nodes available for maintenance."
+                print("No nodes available for maintenance.")
         except:
             if DEBUG:
                 raise
-            print "Error: while finding nodes for maintenance."
+            print("Error: while finding nodes for maintenance.")
     # Out
     elif '-o' in args:
         if '-w' not in args:
-            print "Error: Missing NodeList"
-            print usage
+            print("Error: Missing NodeList")
+            print(usage)
             sys.exit(1)
 
         if comment == '':
-            print "Error: Missing Reason."
-            print usage
+            print("Error: Missing Reason.")
+            print(usage)
             sys.exit(1)
 
         try:
             outnodes = parse_nodelist(args['-w'])
         except:
-            print "Error parsing nodelist."
+            print("Error parsing nodelist.")
             sys.exit(2)
 
         if len(outnodes) > 0:
             mark_nodes_for_maintenance(mcp, outnodes, comment, clusterCommands)
         else:
-            print "Missing node list."
+            print("Missing node list.")
             sys.exit(1)
     # In
     elif '-i' in args:
         if '-w' not in args:
-            print "Error: Missing NodeList"
-            print usage
+            print("Error: Missing NodeList")
+            print(usage)
             sys.exit(1)
 
         try:
             innodes = parse_nodelist(args['-w'])
         except:
-            print "Error parsing nodelist."
+            print("Error parsing nodelist.")
             sys.exit(2)
 
         if len(innodes) > 0:
             make_nodes_available(mcp, innodes, comment, clusterCommands)
         else:
-            print "Missing node list."
+            print("Missing node list.")
             sys.exit(1)
     else:
-        print "Error: No action specified."
+        print("Error: No action specified.")
         sys.exit(1)
 
 
@@ -224,7 +224,7 @@ def setup_mcp(args):
     if DEBUG:
         master.debug = master.basicdebug
     master.load_config()
-    return xmlrpclib.Server(master.config['server_url'])
+    return xmlrpc.client.Server(master.config['server_url'])
 
 
 def get_maint_nodes(mcp):
@@ -232,7 +232,7 @@ def get_maint_nodes(mcp):
 
 
 def check_available_for_work(nodelist, clusterCommands):
-	# Horrible no good ugly hack
+    # Horrible no good ugly hack
     nlist = []
     for node in nodelist:
         if node.startswith('cu') and node[3] == 'n':
@@ -240,26 +240,26 @@ def check_available_for_work(nodelist, clusterCommands):
         nlist.append(node)
     nodestate = clusterCommands.check_nodes_in_use(nlist)
     hsvnodes = [node for node in nodelist if node.startswith('hsv')]
-    return [node for (node, val) in nodestate.iteritems() if not val] + hsvnodes
+    return [node for (node, val) in nodestate.items() if not val] + hsvnodes
 
 
 def print_maint_nodes(mcp, nodelist, history=False):
     nodelist = expand_hostlist(','.join(nodelist))
     node_status_history = mcp.master.getStatusHistory(nodelist)
     node_statuses = {}
-    for (node, status_list) in node_status_history.iteritems():
+    for (node, status_list) in node_status_history.items():
         first_index = 0
-        status_list = [item for item in status_list if item[3]
-                       != '' or (item[3] == '' and item[0] == 'ok')]
+        status_list = [item for item in status_list if item[3] !=
+                       '' or (item[3] == '' and item[0] == 'ok')]
         status_list.sort(cmp=lambda x, y: cmp(y[1], x[1]))
         for item in status_list:
             if item[0] == 'ok':
                 first_index = status_list.index(item) + 1
                 break
-	if first_index != 0:
-		node_statuses[node] = status_list[:first_index - 1]
-	else:
-		node_statuses[node] = status_list
+    if first_index != 0:
+        node_statuses[node] = status_list[:first_index - 1]
+    else:
+        node_statuses[node] = status_list
     for node in nodelist:
         details = node_statuses[node]
         if history:
@@ -271,11 +271,11 @@ def print_maint_nodes(mcp, nodelist, history=False):
             try:
                 status_str = "NodeName=%-12s Status=%-7s Reason=%s" % (
                     node, details[0][0], details[0][3])
-            except IndexError, e:
+            except IndexError as e:
                 status_str = 'NodeName=%-12s Reason="Error Retrieving Reason."' % (
                     node,)
 
-        print status_str
+        print(status_str)
 
 
 def parse_nodelist(nodestr):
@@ -285,32 +285,32 @@ def parse_nodelist(nodestr):
 def mark_nodes_for_maintenance(mcp, nodelist, comment, clusterCommands):
     result = clusterCommands.mark_nodes_for_maint(comment, nodelist)
     if result != 0:
-        print "Error Setting Maintenance Mode."
+        print("Error Setting Maintenance Mode.")
         sys.exit(2)
     try:
         set_status(mcp, 'maint', nodelist, comment)
-    except xmlrpclib.ProtocolError, e:
+    except xmlrpc.client.ProtocolError as e:
         if DEBUG:
-            print "Error setting master status"
+            print("Error setting master status")
 
 
 def make_nodes_available(mcp, nodelist, comment, clusterCommands):
     result = clusterCommands.mark_nodes_available(nodelist, comment)
     if result != 0:
-        print "Error Marking Nodes Available."
+        print("Error Marking Nodes Available.")
         sys.exit(2)
     try:
         set_status(mcp, 'ok', nodelist, comment)
-    except xmlrpclib.ProtocolError, e:
+    except xmlrpc.client.ProtocolError as e:
         if DEBUG:
-            print "Error setting master status."
+            print("Error setting master status.")
 
 
 def set_status(mcp, status, nodelist, comment):
     import pwd
     user = pwd.getpwnam(get_current_user())
     users = mcp.master.getUsers()
-    if user.pw_name not in users.keys():
+    if user.pw_name not in list(users.keys()):
         try:
             full_name = user.pw_gecos.split(',')[0]
         except IndexError:

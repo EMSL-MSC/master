@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # vim: noet:ts=4:sw=4
 
 #from setuptools import setup,find_packages
@@ -26,7 +26,7 @@ class local_build_scripts(build_scripts):
 	def get_source_files(self):
 		l = []
 		for k, v in self.blds.items():
-			print k, v
+			print(k, v)
 			l += v.scripts
 		return l
 
@@ -46,7 +46,7 @@ class local_build_scripts(build_scripts):
 		self.blds = {}
 
 		for d, files in self.scripts:
-			if not self.blds.has_key(d):
+			if d not in self.blds:
 				self.blds[d] = self.mkbld(d)
 			self.blds[d].scripts += files
 
@@ -64,40 +64,28 @@ class local_bdist_rpm(bdist_rpm):
 			self.post_install = 'misc/redhat_post_install'
 		self.fix_python = True
 
-		# little hack to avoid pyc and pyo files
-		filename = tempfile.mkstemp()[1]
-		print filename
-		string = '%s setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES\n' % (
-			sys.executable)
-		string += "sed -i -e 's/\(.*\.py$\)/\\1\\n\\1c\\n\\1o/' INSTALLED_FILES\n"
-		o = open(filename, 'w')
-		o.write(string)
-		o.close()
-		self.install_script = filename
-		# end hack
-
 		bdist_rpm.finalize_options(self)
 
 
 binDir = '/usr/bin'
 sbinDir = '/usr/sbin'
 
-paths = ['%s/' % binDir, "/etc/init.d", "%s/" % sbinDir]
+paths = [f'{binDir}/', "/usr/lib/systemd/system/", f"{sbinDir}/"]
 scr = [['client/master', 'client/sark', 'client/sark-sma',
         'client/nadmin', 'client/mcehandler', 'client/sark-ddn'],
-       ["client/master-sark", "server/master-mcp"], ["server/mcp"]]
-thescripts = zip(paths, scr)
+       ["client/master-sark.service", "server/master-mcp.service"], ["server/mcp"]]
+thescripts = list(zip(paths, scr))
 
 mcp_bin_dirs = open('misc/mcp-bin-dirs.sh', 'w')
 mcp_bin_dirs.write(
-	'#!/bin/sh\nexport MASTER_BIN_DIR=%s\nexport MASTER_SBIN_DIR=%s\n' % (binDir, sbinDir))
+	f'#!/bin/sh\nexport MASTER_BIN_DIR={binDir}\nexport MASTER_SBIN_DIR={sbinDir}\n')
 mcp_bin_dirs.close()
 
-setup(name='master', version='0.17',
+setup(name='master', version='0.18',
       author="Evan Felix",
       author_email="e@pnl.gov",
       description="An asset managment system, designed to watch the cluster and also manage its state",
-      url="https://cvs.pnl.gov/mscf/wiki/MASTER",
+      url="https://gitlab.emsl.pnl.gov/msc_ops/master",
       package_dir={'master': 'lib/master'},
       packages=['master'],
       # distclass=svnDistribution,

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # vim: noet:ts=4:sw=4
 #
@@ -63,68 +63,67 @@ import pwd
 import socket
 import getopt
 import sys
-import xmlrpclib
+import xmlrpc.client
 import os
 import master
 
 usage = """
 master - general MASTER project control program
 
-	Use: master [-c <config file>] [-m <xmlrpcurl>] [-d] <action options>
+  Use: master [-c <config file>] [-m <xmlrpcurl>] [-d] <action options>
 
-	Actions:
+  Actions:
         [ -s <StatusName> [ -D <Status Description> ] ]
-		[ -S ]
-		[ -u username -D <User Display Name> ]
+    [ -S ]
+    [ -u username -D <User Display Name> ]
         [ -w NodeList] [ -a ]
                        [ -l [ -f ] [ -T ]]
                        [ -p [ -f ] [ -T ]]
                        [ -L ]
                        [ -P ]
                        [ -t <status> [ -r <comment> ] ]
-					   [ -n <comment> ]
+             [ -n <comment> ]
                        [ -o <property> -i <value> [ -r <comment> ] ]
                        [ -e <event> [ -r <comment> ] ]
 
-	-c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
-	-m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
-	-v                Verbose, prints out extra information where possible
-	-d                Debug Mode - Show debug messages
+  -c <config file>  Specify Alternate Location of configuration file. default: /etc/mcp.conf
+  -m <xmlrpcurl>    Specify a specific URL for connection to the Master Control Program
+  -v                Verbose, prints out extra information where possible
+  -d                Debug Mode - Show debug messages
 
-	-w <NodeList>     Select Nodes for Action. default: local hostname
+  -w <NodeList>     Select Nodes for Action. default: local hostname
 
-	-a                Add a given list of nodes to the master system
-	-s <StatusName>   Add a new Status type to the master system
-	-D <StatusDescription> A short description of the status state
-	-S                List all available statuses
+  -a                Add a given list of nodes to the master system
+  -s <StatusName>   Add a new Status type to the master system
+  -D <StatusDescription> A short description of the status state
+  -S                List all available statuses
 
-	-l                Show a node status Log (10 entries)
-	-p                Show a node property Log (10 entries)
-	-E				  Show a node event Log (10 entries)
-	-f                Show the full set of properties or statuses availible when using -l,-p options
-	-F <n>			  Limit the output to n lines.
+  -l                Show a node status Log (10 entries)
+  -p                Show a node property Log (10 entries)
+  -E				  Show a node event Log (10 entries)
+  -f                Show the full set of properties or statuses availible when using -l,-p options
+  -F <n>			  Limit the output to n lines.
 
-	-L                Show the state of a list of Nodes
-	-P                Show the current properties of a list of Nodes
+  -L                Show the state of a list of Nodes
+  -P                Show the current properties of a list of Nodes
 
-	-t <status>       Set the Current Status of a node.
-	-o <property>     Set a property on a host.
-	-i <value>        The Value of the set property
-	-r <Reason>       Add a Reason or Comment on the Status, Property Change or Event
+  -t <status>       Set the Current Status of a node.
+  -o <property>     Set a property on a host.
+  -i <value>        The Value of the set property
+  -r <Reason>       Add a Reason or Comment on the Status, Property Change or Event
 
-	-n <comment>      Add a Note about a system
+  -n <comment>      Add a Note about a system
     -e <event>        Add an event for a system
-	-u <username>     Add a user to the master database
+  -u <username>     Add a user to the master database
 """
 
 
 def dt(epoch):
-	try:
-		return strftime("%F %T", localtime(epoch))
-	except TypeError, msg:
-		master.debug("Failed to convert epoch: <" +
-		             str(epoch) + "> to string:" + str(msg))
-		return "unknown"
+  try:
+    return strftime("%F %T", localtime(epoch))
+  except TypeError as msg:
+    master.debug(f"Failed to convert epoch: <{str(epoch)}> to string: {str(msg)}")
+    return "unknown"
 
 # Procedure:
 #  Parse command line
@@ -141,344 +140,335 @@ def dt(epoch):
 
 
 def main():
-	types = []
-	verbose = None
-	all = False
-	all_limit = False
-	nodeList = [socket.gethostname().split(".")[0]]
-	listProperty = False
-	listStatus = False
-	listEvents = False
-	addNodes = False
-	addStatus = False
-	showStatus = False
-	showProperty = False
-	addUser = False
-	makeComment = False
-	showAllStatuses = False
-	eventStore = False
-	description = ""
-	reason = ""
-	propertyValue = ""
-	statusValue = ""
-	comment = ""
-	property = ""
-	serverurl = ""
-	timeOrdered = False
-	start_date = None
-	end_date = None
+  types = []
+  verbose = None
+  all = False
+  all_limit = False
+  nodeList = [socket.gethostname().split(".")[0]]
+  listProperty = False
+  listStatus = False
+  listEvents = False
+  addNodes = False
+  addStatus = False
+  showStatus = False
+  showProperty = False
+  addUser = False
+  makeComment = False
+  showAllStatuses = False
+  eventStore = False
+  description = ""
+  reason = ""
+  propertyValue = ""
+  statusValue = ""
+  comment = ""
+  property = ""
+  serverurl = ""
+  timeOrdered = False
+  start_date = None
+  end_date = None
 
-	optlist, args = getopt.getopt(sys.argv[1:],
-                               "c:m:vdhas:D:lpLPt:To:i:r:w:fF:u:n:Se:E",
-                               ['start-date=', 'end-date='])
+  optlist, args = getopt.getopt(sys.argv[1:],
+                                "c:m:vdhas:D:lpLPt:To:i:r:w:fF:u:n:Se:E",
+                                ['start-date=', 'end-date='])
 
-	if args:
-		print "Extra Arguments Given:" + str(args)
-		return
+  if args:
+    print("Extra Arguments Given:" + str(args))
+    return
 
-	actioncount = 0
-	for (arg, val) in optlist:
-		if arg == "-c":
-			master.config["config_file"] = val
-		if arg == "-m":
-			serverurl = val
-		if arg == "-v":
-			verbose = True
-		if arg == "-d":
-			master.debug = master.basicdebug
+  actioncount = 0
+  for (arg, val) in optlist:
+    if arg == "-c":
+      master.config["config_file"] = val
+    if arg == "-m":
+      serverurl = val
+    if arg == "-v":
+      verbose = True
+    if arg == "-d":
+      master.debug = master.basicdebug
 
-		if arg == "-a":
-			addNodes = True  # FIXME need to expand this later
-			actioncount += 1
-		if arg == "-s":
-			addStatus = val
-			actioncount += 1
-		if arg == "-u":
-			addUser = val
-			actioncount += 1
-		if arg == "-D":
-			description = val
+    if arg == "-a":
+      addNodes = True  # FIXME need to expand this later
+      actioncount += 1
+    if arg == "-s":
+      addStatus = val
+      actioncount += 1
+    if arg == "-u":
+      addUser = val
+      actioncount += 1
+    if arg == "-D":
+      description = val
 
-		if arg == "-w":
-			nodeList = expand_hostlist(val)
+    if arg == "-w":
+      nodeList = expand_hostlist(val)
 
-		if arg == "-l":
-			listStatus = True
-			actioncount += 1
-		if arg == "-p":
-			listProperty = True
-			actioncount += 1
-		if arg == "-E":
-			listEvents = True
-			actioncount += 1
+    if arg == "-l":
+      listStatus = True
+      actioncount += 1
+    if arg == "-p":
+      listProperty = True
+      actioncount += 1
+    if arg == "-E":
+      listEvents = True
+      actioncount += 1
 
-		if arg == '-f':
-			all = True
-		if arg == "-F":
-			try:
-				all_limit = int(val)
-			except ValueError:
-				print >>sys.stderr, "ERROR: argument to -f must be an integer: %s" % val
+    if arg == '-f':
+      all = True
+    if arg == "-F":
+      try:
+        all_limit = int(val)
+      except ValueError:
+        print(f"ERROR: argument to -f must be an integer: {val}", file=sys.stderr)
 
-		if arg == '-L':
-			showStatus = True
-			actioncount += 1
-		if arg == '-P':
-			showProperty = True
-			actioncount += 1
+    if arg == '-L':
+      showStatus = True
+      actioncount += 1
+    if arg == '-P':
+      showProperty = True
+      actioncount += 1
 
-		if arg == '-T':
-			timeOrdered = True
+    if arg == '-T':
+      timeOrdered = True
 
-		if arg == '-t':
-			statusValue = val
-			actioncount += 1
-		if arg == '-o':
-			property = val
-			actioncount += 1
-		if arg == '-i':
-			propertyValue = val
-		if arg == '-r':
-			comment = val
+    if arg == '-t':
+      statusValue = val
+      actioncount += 1
+    if arg == '-o':
+      property = val
+      actioncount += 1
+    if arg == '-i':
+      propertyValue = val
+    if arg == '-r':
+      comment = val
 
-		if arg == '-n':
-			makeComment = val
-			actioncount += 1
+    if arg == '-n':
+      makeComment = val
+      actioncount += 1
 
-		if arg == '-e':
-			eventStore = val
-			actioncount += 1
+    if arg == '-e':
+      eventStore = val
+      actioncount += 1
 
-		if arg == '-S':
-			showAllStatuses = True
-			actioncount += 1
+    if arg == '-S':
+      showAllStatuses = True
+      actioncount += 1
 
-		if arg == '--start-date':
-			try:
-				start_date = strptime(val, '%Y-%m-%d')
-			except ValueError:
-				print "start date format was not YYYY-MM-DD"
-				print usage
-				return
+    if arg == '--start-date':
+      try:
+        start_date = strptime(val, '%Y-%m-%d')
+      except ValueError:
+        print("start date format was not YYYY-MM-DD")
+        print(usage)
+        return
 
-		if arg == '--end-date':
-			try:
-				end_date = strptime(val, '%Y-%m-%d')
-			except ValueError:
-				print "end date format was not YYYY-MM-DD"
-				print usage
-				return
+    if arg == '--end-date':
+      try:
+        end_date = strptime(val, '%Y-%m-%d')
+      except ValueError:
+        print("end date format was not YYYY-MM-DD")
+        print(usage)
+        return
 
-		if arg == "-h":
-			print usage
-			return
+    if arg == "-h":
+      print(usage)
+      return
 
-	if actioncount != 1:
-		print "You have specified an invalid number of actions.  You must specify exactly 1 action. You specfied:", actioncount
-		print usage
-		return
+  if actioncount != 1:
+    print("You have specified an invalid number of actions.  You must specify exactly 1 action. You specfied:", actioncount)
+    print(usage)
+    return
 
-	if (listProperty or listStatus or addNodes or showStatus or
-         showProperty or makeComment or property or eventStore or
-                listEvents)\
-                and not nodeList:
+  if (listProperty or listStatus or addNodes or showStatus
+             or showProperty or makeComment or property or eventStore
+          or listEvents)\
+          and not nodeList:
 
-		print "You have not provided a node list for processing"
-		print usage
-		return
+    print("You have not provided a node list for processing")
+    print(usage)
+    return
 
-		master.debug("nodeList=" + str(nodeList))
+    master.debug("nodeList=" + str(nodeList))
 
-	master.load_config()
-	if serverurl:
-		master.config["server_url"] = serverurl
+  master.load_config()
+  if serverurl:
+    master.config["server_url"] = serverurl
 
-	mcp = xmlrpclib.Server(master.config["server_url"])
+  mcp = xmlrpc.client.Server(master.config["server_url"])
 
-	if start_date or end_date:
-		if not start_date:
-			start_date = '-infinity'
-			end_date = mktime(end_date)
-		elif not end_date:
-			end_date = 'infinity'
-			start_date = mktime(start_date)
-		else:
-			start_date = mktime(start_date)
-			end_date = mktime(end_date)
+  if start_date or end_date:
+    if not start_date:
+      start_date = '-infinity'
+      end_date = mktime(end_date)
+    elif not end_date:
+      end_date = 'infinity'
+      start_date = mktime(start_date)
+    else:
+      start_date = mktime(start_date)
+      end_date = mktime(end_date)
 
-	if listProperty:
-		plog = None
-		if start_date or end_date:
-			plog = mcp.master.getNodePropertyHistory(
-			    nodeList, False, start_date, end_date)
-		else:
-			plog = mcp.master.getNodePropertyHistory(nodeList)
-		master.debug("Result of getNodePropertyHistory: " + str(plog))
-		if plog:
-			if timeOrdered:
-				print_time_ordered_logs(plog, all, all_limit,
-                                    log_type='property')
-			else:
-				print_logs(plog, all, all_limit, log_type='property')
+  if listProperty:
+    plog = None
+    if start_date or end_date:
+      plog = mcp.master.getNodePropertyHistory(
+          nodeList, False, start_date, end_date)
+    else:
+      plog = mcp.master.getNodePropertyHistory(nodeList)
+    master.debug("Result of getNodePropertyHistory: " + str(plog))
+    if plog:
+      if timeOrdered:
+        print_time_ordered_logs(plog, all, all_limit,
+                                log_type='property')
+      else:
+        print_logs(plog, all, all_limit, log_type='property')
 
-	elif listStatus:
-		slog = None
-		if start_date or end_date:
-			slog = mcp.master.getStatusHistory(nodeList, False, start_date, end_date)
-		else:
-			slog = mcp.master.getStatusHistory(nodeList)
-		master.debug("result of getStatusHistory: " + str(slog))
-		if slog:
-			if timeOrdered:
-				print_time_ordered_logs(slog, all, all_limit,
-                                    log_type='status')
-			else:
-				print_logs(slog, all, all_limit, log_type='status')
-	elif listEvents:
-		elog = None
-		if start_date or end_date:
-			master.debug("Calling getNodeEventHistory(%s,False,%s,%s)" % (
-                            nodeList,
-                            start_date,
-                            end_date))
-			elog = mcp.master.getNodeEventHistory(nodeList, False,
-                                         start_date, end_date)
-		else:
-			master.debug("Calling getNodeEventHistory(%s)" % (
-                            nodeList))
-			elog = mcp.master.getNodeEventHistory(nodeList)
-		master.debug("Result of getNodeEventHistory:" + str(elog))
-		if elog:
-			if timeOrdered:
-				print_time_ordered_logs(elog, all, all_limit,
-                                    log_type='event')
-			else:
-				print_logs(elog, all, all_limit, log_type='event')
+  elif listStatus:
+    slog = None
+    if start_date or end_date:
+      slog = mcp.master.getStatusHistory(nodeList, False, start_date, end_date)
+    else:
+      slog = mcp.master.getStatusHistory(nodeList)
+    master.debug("result of getStatusHistory: " + str(slog))
+    if slog:
+      if timeOrdered:
+        print_time_ordered_logs(slog, all, all_limit,
+                                log_type='status')
+      else:
+        print_logs(slog, all, all_limit, log_type='status')
+  elif listEvents:
+    elog = None
+    if start_date or end_date:
+      master.debug(f"Calling getNodeEventHistory({nodeList},False,{start_date},{end_date})")
+      elog = mcp.master.getNodeEventHistory(nodeList, False,
+                                            start_date, end_date)
+    else:
+      master.debug(f"Calling getNodeEventHistory({nodeList})")
+      elog = mcp.master.getNodeEventHistory(nodeList)
+    master.debug("Result of getNodeEventHistory:" + str(elog))
+    if elog:
+      if timeOrdered:
+        print_time_ordered_logs(elog, all, all_limit,
+                                log_type='event')
+      else:
+        print_logs(elog, all, all_limit, log_type='event')
 
-	elif addNodes:
-		for node in nodeList:
-			try:
-				mcp.master.addNode(node)
-			except xmlrpclib.Fault, e:
-				print >>sys.stderr, "Adding Node Failed:", e
+  elif addNodes:
+    for node in nodeList:
+      try:
+        mcp.master.addNode(node)
+      except xmlrpc.client.Fault as e:
+        print("Adding Node Failed:", e, file=sys.stderr)
 
-	elif addStatus:
-		try:
-			mcp.master.addStatus(addStatus, description)
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Add Status Failed", e
+  elif addStatus:
+    try:
+      mcp.master.addStatus(addStatus, description)
+    except xmlrpc.client.Fault as e:
+      print("Add Status Failed", e, file=sys.stderr)
 
-	elif addUser and description:
-		try:
-			mcp.master.addUser(addUser, description)
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Add User Failed", e
+  elif addUser and description:
+    try:
+      mcp.master.addUser(addUser, description)
+    except xmlrpc.client.Fault as e:
+      print("Add User Failed", e, file=sys.stderr)
 
-	elif showProperty:
-		res = mcp.master.getNodeProperties(nodeList)
-		if res:
-			for node, props in res.items():
-				print node + ":"
-				for l in props:
-					print " ", dt(l[2]), ":", l[0], "=", l[1], "   ", l[3]
+  elif showProperty:
+    res = mcp.master.getNodeProperties(nodeList)
+    if res:
+      for node, props in res.items():
+        print(node + ":")
+        for l in props:
+          print(f" {dt(l[2])}:{l[0]}={l[1]}   {l[3]}")
 
-	elif showStatus:
-		res = mcp.master.getNodeStatus(nodeList)
-		if res:
-			for node, stats in res.items():
-				print node + \
-				    ":", dt(stats[1]), ":", stats[0], "by", stats[2], "   C:", stats[3]
+  elif showStatus:
+    res = mcp.master.getNodeStatus(nodeList)
+    if res:
+      for node, stats in res.items():
+        print(f"{node}:{dt(stats[1])}:{stats[0]}by{stats[2]}   C:{stats[3]}")
 
-	elif statusValue:
-		try:
-			mcp.master.updateStatus(nodeList, statusValue,
-			                        pwd.getpwuid(os.getuid())[0], comment)
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Error Setting Status:", e
+  elif statusValue:
+    try:
+      mcp.master.updateStatus(nodeList, statusValue,
+                              pwd.getpwuid(os.getuid())[0], comment)
+    except xmlrpc.client.Fault as e:
+      print("Error Setting Status:", e, file=sys.stderr)
 
-	elif makeComment:
-		try:
-			statuses = mcp.master.getNodeStatus(nodeList)
-			# print statuses
-			for node in nodeList:
-				mcp.master.updateStatus([node], statuses[node][0],
-				                        pwd.getpwuid(os.getuid())[0], makeComment)
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Error Setting Status:", e
-	elif eventStore:
-		try:
-    		mcp.master.storeNodeEvent(nodeList, eventStore,
-                                pwd.getpwuid(os.getuid())[0], comment)
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Error storing event:", e
+  elif makeComment:
+    try:
+      statuses = mcp.master.getNodeStatus(nodeList)
+      # print statuses
+      for node in nodeList:
+        mcp.master.updateStatus([node], statuses[node][0],
+                                pwd.getpwuid(os.getuid())[0], makeComment)
+    except xmlrpc.client.Fault as e:
+      print("Error Setting Status:", e, file=sys.stderr)
+  elif eventStore:
+    try:
+        mcp.master.storeNodeEvent(nodeList, eventStore,
+                                  pwd.getpwuid(os.getuid())[0], comment)
+    except xmlrpc.client.Fault as e:
+      print("Error storing event:", e, file=sys.stderr)
 
-	elif showAllStatuses:
-		try:
-			stati = mcp.master.getStatus()
-			for k, v in stati.items():
-				print k, ":", v
-		except xmlrpclib.Fault, e:
-			print >>sys.stderr, "Error Listing Statuses:", e
+  elif showAllStatuses:
+    try:
+      stati = mcp.master.getStatus()
+      for k, v in stati.items():
+        print(f"{k}:{v}")
+    except xmlrpc.client.Fault as e:
+      print("Error Listing Statuses:", e, file=sys.stderr)
 
-	elif property:
-		for node in nodeList:
-			master.debug("setting <" + node + "> property <" +
-			             property + "> to <" + propertyValue + ">")
-			try:
-				res = mcp.master.updateNodeProperty(node, property, propertyValue)
-				master.debug("updateNodeProperty: res = " + `res`)
-			except xmlrpclib.Fault, e:
-				print >>sys.stderr, "Error Setting Property:", e
+  elif property:
+    for node in nodeList:
+      master.debug(f"setting <{node}> property <{property}> to <{propertyValue}>")
+      try:
+        res = mcp.master.updateNodeProperty(node, property, propertyValue)
+        master.debug(f"updateNodeProperty: res = {repr(res)}")
+      except xmlrpc.client.Fault as e:
+        print("Error Setting Property:", e, file=sys.stderr)
 
-	else:
-		print "unhandled options:", sys.argv
+  else:
+    print("unhandled options:", sys.argv)
 
 
 def print_time_ordered_logs(logs, all, all_limit, log_type):
-	ret = []
-	if not all:
-		ret = [[name] + log for name, ret in logs.iteritems()
-                    for log in ret[-10:]]
-	elif all and all_limit:
-		ret = [[name] + log for name, ret in logs.iteritems()
-                    for log in ret[-all_limit:]]
-	else:
-		ret = [[name] + log for name, ret in logs.iteritems() for log in ret]
-	sorted_nodes = expand_hostlist(','.join(logs.keys()))
-	ret.sort(cmp=lambda x, y: cmp((x[2], sorted_nodes.index(x[0])),
-                               (y[2], sorted_nodes.index(y[0]))))
-	for log in ret:
-		if log_type == 'property':
-			print "%s %s: %s=%s   %s" % (log[0],
-                                dt(log[3]), log[1], log[2], log[4])
-		else:
-			print "%s %s: %s by %s   C: %s" % (log[0], dt(log[2]), log[1],
-                                      log[3], log[4])
+  ret = []
+  if not all:
+    ret = [[name] + log for name, ret in logs.items()
+           for log in ret[-10:]]
+  elif all and all_limit:
+    ret = [[name] + log for name, ret in logs.items()
+           for log in ret[-all_limit:]]
+  else:
+    ret = [[name] + log for name, ret in logs.items() for log in ret]
+  sorted_nodes = expand_hostlist(','.join(list(logs.keys())))
+  ret.sort(cmp=lambda x, y: cmp((x[2], sorted_nodes.index(x[0])),
+                                (y[2], sorted_nodes.index(y[0]))))
+  for log in ret:
+    if log_type == 'property':
+      print(f"{log[0]} {dt(log[3])}: {log[1]}={log[2]}   {log[4]}")
+    else:
+      print(f"{log[0]} {dt(log[2])}: {log[1]} by {log[3]}   C: {log[4]}")
 
 
 def print_logs(input_logs, all, all_limit, log_type):
-	for node, logs in input_logs.iteritems():
-		if not all:
-			logs = logs[-10:]
-		elif all_limit:
-			logs = logs[-all_limit:]
-		print node + ":"
-		for l in logs:
-			master.debug(str(l))
-			if log_type == "property":
-				print "  %s: %s = %s     %s" % (dt(l[2]), l[0], l[1], l[3])
-			else:
-				print "  %s: %s by %s   C: %s" % (dt(l[1]),
-                                      l[0], l[2], l[3])
+  for node, logs in input_logs.items():
+    if not all:
+      logs = logs[-10:]
+    elif all_limit:
+      logs = logs[-all_limit:]
+    print(node + ":")
+    for l in logs:
+      master.debug(str(l))
+      if log_type == "property":
+        print(f"  {dt(l[2])}: {l[0]} = {l[1]}     {l[3]}")
+      else:
+        print(f"  {dt(l[1])}: {l[0]} by {l[2]}   C: {l[3]}")
 
 
 if __name__ == "__main__":
-	try:
-		main()
-	except KeyboardInterrupt:
-		pass
-	except xmlrpclib.ProtocolError, e:
-		if e.errcode == 401:
-			print >>sys.stderr, "Authentication error:", e.errmsg
-		else:
-			raise
+  try:
+    main()
+  except KeyboardInterrupt:
+    pass
+  except xmlrpc.client.ProtocolError as e:
+    if e.errcode == 401:
+      print("Authentication error:", e.errmsg, file=sys.stderr)
+    else:
+      raise

@@ -37,7 +37,7 @@ CREATE TABLE node_properties_log (
     node_id integer NOT NULL REFERENCES node(id),
     property_id integer NOT NULL REFERENCES property(id),
     "time" timestamp without time zone DEFAULT now() NOT NULL,
-    value character varying(64),
+    value character varying(128),
     "comment" character varying(255)
 );
 
@@ -47,7 +47,7 @@ CREATE TABLE node_status_log (
     node_id integer NOT NULL REFERENCES node(id),
     status_id integer NOT NULL REFERENCES status(id),
     "time" timestamp without time zone DEFAULT now() NOT NULL,
-    "comment" character varying(64),
+    "comment" character varying(128),
     user_id integer NOT NULL REFERENCES users(id)
 );
 

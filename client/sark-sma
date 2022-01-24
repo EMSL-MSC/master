@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 #
 # Copyright © 2008,2009, Battelle Memorial Institute
@@ -60,7 +60,7 @@
 import socket
 import getopt
 import sys
-import xmlrpclib
+import xmlrpc.client
 import os
 import master.sma
 import master
@@ -106,7 +106,7 @@ def main():
 	optlist, args = getopt.getopt(sys.argv[1:], "c:s:u:a:m:vdh")
 
 	if args:
-		print "Extra Arguments Given:" + args
+		print("Extra Arguments Given:" + args)
 		return
 
 	for (arg, val) in optlist:
@@ -125,7 +125,7 @@ def main():
 		if arg == "-d":
 			master.debug = master.basicdebug
 		if arg == "-h":
-			print usage
+			print(usage)
 			return
 
 	master.load_config()
@@ -145,7 +145,7 @@ def main():
 
 	props = {}
 
-	mcp = xmlrpclib.Server(master.config["server_url"])
+	mcp = xmlrpc.client.Server(master.config["server_url"])
 	myname = socket.gethostname().split(".")[0]
 
 	hsvs = master.sma.get_hsv_info(
@@ -156,55 +156,54 @@ def main():
 	for hsv in hsvs:
 		props = hsvs[hsv]
 		if verbose:
-			print "Processing:", hsv
+			print("Processing:", hsv)
 
 		# check to see if node exists:
 		nodes = mcp.master.getNodes([hsv])
 		if len(nodes) == 0:
-			print "hsv node:", hsv, "does not exist in database"
+			print(f"hsv node: {hsv} does not exist in database")
 			continue
 
 		sprops = mcp.master.getNodeProperties([hsv])
-		if sprops.has_key(hsv):
+		if hsv in sprops:
 			current = sprops[hsv]
 		else:
 			if verbose:
-				print "hsv node:", hsv, "no  properties found"
+				print(f"hsv node: {hsv} no  properties found")
 			current = []
 
 		# propstoupdate = filter(lambda a: a in current.keys(), props.keys())
 		for k, v, ts, cmt in current:
-			if props.has_key(k) and props[k] == v:
-				master.debug("deleting key <" + k +
-				             "> because it is already on the server")
+			if k in props and props[k] == v:
+				master.debug(f"deleting key <{k}> because it is already on the server")
 				del(props[k])
 
 		# Everything that is left needs to updated on the server
 		for k, v in props.items():
 			try:
 				if verbose:
-					print "Adding", k, " => ", v
+					print(f"Adding {k} => {v}")
 
 				res = mcp.master.updateNodeProperty(hsv, k, v)
-				master.debug("updateNodeProperty: res = " + `res`)
-			except xmlrpclib.Fault, msg:
-				master.debug("Adding key <" + k + "> to db because:" + str(msg))
+				master.debug("updateNodeProperty: res = " + repr(res))
+			except xmlrpc.client.Fault as msg:
+				master.debug(f"Adding key <{k}> to db because:{str(msg)}")
 
 				try:
 					res = mcp.master.addProperty(k, "Added by Sark on " + myname)
-					master.debug("addProperty: res=" + `res`)
-				except xmlrpclib.Fault:
-					print >>sys.stderr, "Error adding New property"
+					master.debug("addProperty: res=" + repr(res))
+				except xmlrpc.client.Fault:
+					print("Error adding New property", file=sys.stderr)
 					continue  # just move on
 
 				try:
 					res = mcp.master.updateNodeProperty(hsv, k, v)
 					pass
-				except xmlrpclib.Fault, msg:
-					print >>sys.stderr, "Error adding " + k + " => " + v + ": " + str(msg)
+				except xmlrpc.client.Fault as msg:
+					print(f"Error adding {k} => {v}: {str(msg)}", file=sys.stderr)
 
-			except Exception, msg:  # Will this ever happen
-				master.debug("Error updating property:" + k + ":" + str(msg))
+			except Exception as msg:  # Will this ever happen
+				master.debug(f"Error updating property:{k}:{str(msg)}")
 
 
 if __name__ == "__main__":

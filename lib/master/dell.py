@@ -56,7 +56,7 @@
 #
 """A library to use omreport to gather properties from the DELL PERC Cards."""
 
-import ssv
+from . import ssv
 import os
 from master.util import *
 
@@ -73,15 +73,13 @@ def getControllerDiskInfo(id, disktype):
 	if not os.access("/usr/bin/omreport", os.X_OK):
 		return {}
 
-	p = os.popen("/usr/bin/omreport storage %s controller=%s -fmt ssv" %
-	             (disktype, id), "r")
+	p = os.popen(f"/usr/bin/omreport storage {disktype} controller={id} -fmt ssv", "r")
 	l = ssv.getSSVDicts(p)
 	p.close()
 
 	for d in l:
 		did = d["ID"]
-		info.update(mapit(d, dmap[disktype], "perc.c" +
-                    id + "." + disktype + "." + did))
+		info.update(mapit(d, dmap[disktype], f"perc.c{id}.{disktype}.{did}"))
 
 	return info
 
@@ -111,10 +109,10 @@ def getAllPERCInfo():
 
 def _test():
 	d = getAllPERCInfo()
-	keys = d.keys()
+	keys = list(d.keys())
 	keys.sort()
 	for key in keys:
-		print key, " => ", d[key]
+		print(key, " => ", d[key])
 
 
 if __name__ == "__main__":

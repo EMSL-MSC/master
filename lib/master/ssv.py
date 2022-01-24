@@ -83,10 +83,10 @@ def getSSVDicts(fileobj):
 
 
 def _test():
-    import StringIO
-    out = getSSVDicts(StringIO.StringIO(testformat))
+    import io
+    out = getSSVDicts(io.StringIO(testformat))
     for i in out:
-        print i
+        print(i)
 
 
 if __name__ == "__main__":

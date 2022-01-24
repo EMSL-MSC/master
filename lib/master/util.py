@@ -67,7 +67,7 @@ def mapit(dict, map, prefix):
 	else:
 		pref = ''
 	for key in dict.keys():
-		if key in map.keys():
+		if key in list(map.keys()):
 			infos[pref + map[key]] = dict[key]
 
 	return infos
@@ -94,7 +94,7 @@ def doLineParse(lines, prefix, map, sep=':'):
 	for line in lines:
 		try:
 			(first, second) = line.split(sep, 1)
-			infos[prefix + "." + map[first.strip()]] = second.strip()
+			infos[f"{prefix}.{map[first.strip()]}"] = second.strip()
 		except (ValueError, KeyError):
 			pass  # split error (no colon in line) or first not in map
 

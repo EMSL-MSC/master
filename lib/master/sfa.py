@@ -132,15 +132,15 @@ def main():
 
 def dumpKeys():
 	for c in (SFAController, SFADiskDrive, SFADiskSlot, SFAEnclosure, SFAExpander, SFAFan, SFAPowerSupply, SFAStoragePool, SFAStorageSystem, SFAUPS):
-		print c
+		print(c)
 		item = c.getAll()[0]
 		keys = item.cimProps
-		for key in sorted(keys.iterkeys()):
+		for key in sorted(keys.keys()):
 			try:
-				print "  %-40s   %s" % (key, item.__getattribute__(key))
-			except APIClientException, msg:
-				print "  ", key, msg
-		print "\f"
+				print("  %-40s   %s" % (key, item.__getattribute__(key)))
+			except APIClientException as msg:
+				print("  ", key, msg)
+		print("\f")
 
 
 def dumpProps(prefix, item, props):
@@ -149,11 +149,11 @@ def dumpProps(prefix, item, props):
 		v = item.__getattribute__(p)
 		try:
 			# deal with API enums
-			v = next((key for key, val in v.values.iteritems() if v == val), "BADVALUE")
+			v = next((key for key, val in v.values.items() if v == val), "BADVALUE")
 		except AttributeError:
 			# take the value as it stands
 			pass
-		d[prefix + "." + p] = str(v)
+		d[f"{prefix}.{p}"] = str(v)
 	return d
 
 
@@ -170,8 +170,7 @@ def dumpDisks():
 	d = {}
 	list = SFADiskDrive.getAll()
 	for item in list:
-		p = "enclosure" + str(item.EnclosureIndex) + \
-                    ".disk" + str(item.DiskSlotNumber)
+		p = f"enclosure{str(item.EnclosureIndex)}.disk{str(item.DiskSlotNumber)}"
 		d.update(dumpProps(p, item, _diskProps))
 	return d
 
@@ -180,8 +179,7 @@ def dumpEncPart(cls, prefix, props):
 	d = {}
 	list = cls.getAll()
 	for item in list:
-		p = "enclosure" + str(item.EnclosureIndex) + "." + \
-                    prefix + str(item.Position)
+		p = f"enclosure{str(item.EnclosureIndex)}.{prefix}{str(item.Position)}"
 		d.update(dumpProps(p, item, props))
 	return d
 
@@ -214,8 +212,8 @@ def gatherSFAInfo(hostlist, user, password):
 			d.update(dumpEncPart(SFASEP, "sep", _sepProps))
 			d.update(dumpPools())
 			break
-		except APIException, msg:
-			print "Error", msg
+		except APIException as msg:
+			print("Error", msg)
 		finally:
 			APIDisconnect()
 	return d

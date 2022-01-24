@@ -109,12 +109,12 @@ class smamgr:
 		return "<wrapper>" + data + "</wrapper>"
 
 	def gethsvinfo(self):
-		map = {'objectwwn'			: 'wwn',
-                    'firmwareversion'	: 'fwver',
-                    'operationalstate'	: 'state',
+		map = {'objectwwn': 'wwn',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
                     # 'statestring'		:'statestring', #huh?
-                    'totalstoragespace'	: 'totalspace',
-                    'usedstoragespace'	: 'usedspace',
+                    'totalstoragespace': 'totalspace',
+                    'usedstoragespace': 'usedspace',
                     'availablestoragespace': 'availablespace',
                     'operationalstatedetail': 'statedetail'}
 
@@ -137,32 +137,31 @@ class smamgr:
 
 	def getvdiskinfo(self, hsvname):
 		map = {'onlinecontroller/controllername': 'onlinecontroller',
-                    'operationalstate'		: 'state',
+                    'operationalstate': 'state',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls vdisk full xml"))
+			f"select cell {hsvname}", "ls vdisk full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
 			e = o.findtext("familyname")
-			prefix = e + "."
 
-			for k, v in map.items():
-				d[prefix + v] = o.findtext(k)
+			for k, v in list(map.items()):
+				d[f"{e}.{v}"] = o.findtext(k)
 
 		return d
 
 	def getdiskshelfinfo(self, hsvname):
-		map = {'operationalstate'		: 'state',
-                    'wwnodename'			: 'wwn',
-                    'looppair'				: 'looppair',
-                    'emu/operationalstate'	: 'emu.state',
-                    'emu/firmwareversion'	: 'emu.fwver',
+		map = {'operationalstate': 'state',
+                    'wwnodename': 'wwn',
+                    'looppair': 'looppair',
+                    'emu/operationalstate': 'emu.state',
+                    'emu/firmwareversion': 'emu.fwver',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls diskshelf full xml"))
+			f"select cell {hsvname}", "ls diskshelf full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
@@ -194,14 +193,14 @@ class smamgr:
 
 	def getdiskinfo(self, hsvname):
 
-		map = {'nodewwid'			: 'wwid',
-                    'firmwareversion'		: 'fwver',
-                    'operationalstate'		: 'state',
-                    'modelnumber'			: 'model',
-                    'formattedcapacity'	: 'capacity',
-                    'migrationstate'		: 'migrationstate',
-                    'diskbaynumber'			: 'diskbay',
-                    'shelfnumber'			: 'shelfnumber',
+		map = {'nodewwid': 'wwid',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
+                    'modelnumber': 'model',
+                    'formattedcapacity': 'capacity',
+                    'migrationstate': 'migrationstate',
+                    'diskbaynumber': 'diskbay',
+                    'shelfnumber': 'shelfnumber',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
@@ -227,15 +226,15 @@ class smamgr:
 
 	def getcontrollerinfo(self, hsvname):
 
-		map = {'serialnumber'			: 'serial',
-                    'firmwareversion'		: 'fwver',
-                    'operationalstate'		: 'state',
-                    'modelnumber'			: 'model',
-                    'controllertemperaturestatus'	: 'tempstatus',
+		map = {'serialnumber': 'serial',
+                    'firmwareversion': 'fwver',
+                    'operationalstate': 'state',
+                    'modelnumber': 'model',
+                    'controllertemperaturestatus': 'tempstatus',
                     'operationalstatedetail': 'statedetail'}
 
 		e = myelementtree.fromstring(self.runcmdstoxml(
-			"select cell %s" % (hsvname), "ls controller full xml"))
+			f"select cell {hsvname}", "ls controller full xml"))
 		d = {}
 
 		for o in e.getiterator("object"):
@@ -280,12 +279,12 @@ if __name__ == "__main__":
 	master.load_config()
 	master.load_privileged_config()
 	if len(sys.argv) != 4:
-		print "Usage: %s <ioserver> <ioserver_user> <sma>" % (sys.argv[0],)
+		print("Usage: %s <ioserver> <ioserver_user> <sma>" % (sys.argv[0],))
 		sys.exit()
 	s = smamgr(sys.argv[1], sys.argv[3], sys.argv[2],
             master.config['sma_username'], master.config['sma_password'])
 
 	for k, v in s.gethsvinfo().items():
-		print k
+		print(k)
 		for dk, dv in v.items():
-			print "\t", dk, dv
+			print("\t", dk, dv)

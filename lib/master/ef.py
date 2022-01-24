@@ -67,7 +67,7 @@ _PSUPhysicalPackageProps = (
 
 
 def emit(key, value):
-	print key, "=", value
+	print(f"{key}={value}")
 
 
 def main():
@@ -86,15 +86,15 @@ def dumpKeys(code=False):
 	for c in (Controller, DiskSoftwareIdentity, ControllerSoftwareIdentity, DiskDrive, Volume, PSU, PSUFan, DiskExtent, DiskSASPort, SASPort, TopComputerSystemProduct, FCPort, PSUPhysicalPackage):
 		item = c.getAll()[0]
 		if code:
-			print "_" + item.cimName[4:] + "Props = ("
+			print(f"_{item.cimName[4:]}Props = (")
 			for k in c.cimProps.keys():
-				print "\t'" + k + "'"
-			print ")"
+				print(f"\t'{k}'")
+			print(")")
 		else:
-			print c
+			print(c)
 			item.writeProperties(sys.stdout)
 
-		print "\f"
+		print("\f")
 
 
 def dumpProps(prefix, item, props):
@@ -103,7 +103,7 @@ def dumpProps(prefix, item, props):
 		v = item.__getattribute__(p)
 		try:
 			# deal with API enums
-			v = next((key for key, val in v.values.iteritems() if v == val), "BADVALUE")
+			v = next((key for key, val in v.values.items() if v == val), "BADVALUE")
 		except AttributeError:
 			# take the value as it stands
 			pass
@@ -152,7 +152,7 @@ def gatherEFInfo(hostlist, user, password):
 
 	for host in hostlist:
 		try:
-			APIConnect("https://" + host, auth=(user, password))
+			APIConnect(f"https://{host}", auth=(user, password))
 			d.update(dumpControllers())
 			d.update(dumpSimple(DiskSoftwareIdentity, "", _DiskSoftwareIdentityProps))
 			d.update(dumpSimple(DiskDrive, "", _DiskDriveProps))
@@ -165,8 +165,8 @@ def gatherEFInfo(hostlist, user, password):
 			d.update(dumpBasic(TopComputerSystemProduct,
                             "system", _TopComputerSystemProductProps))
 			break
-		except APIException, msg:
-			print "Error", msg
+		except APIException as msg:
+			print("Error", msg)
 		APIDisconnect()
 	return d
 

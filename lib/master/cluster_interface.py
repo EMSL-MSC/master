@@ -107,35 +107,35 @@ class ClusterCommands(object):
 
 class DebugCommands(ClusterCommands):
     def __init__(self, *args):
-        print "DebugCommands(%s)" % (args,)
+        print(f"DebugCommands({args})")
 
     def get_node_status(self, nodename):
-        print "get_node_status(%s)" % nodename
+        print(f"get_node_status({nodename})")
 
     def get_nodes_status(self, nodelist):
-        print "get_nodes_status(%s)" % (nodelist,)
+        print(f"get_nodes_status({nodelist})")
 
     def check_nodes_in_use(self, nodelist=[]):
-        print "check_nodes_in_use(%s)" % (nodelist,)
+        print(f"check_nodes_in_use({nodelist})")
 
     def mark_nodes_for_maint(self, comment, nodelist=[]):
-        print "mark_nodes_for_maint(%s, %s)" % (comment, nodelist,)
+        print(f"mark_nodes_for_maint({comment}, {nodelist})")
 
     def mark_nodes_available(self, comment, nodelist=[]):
-        print "mark_nodes_available(%s, %s)" % (comment, nodelist,)
+        print(f"mark_nodes_available({comment}, {nodelist})")
 
 
 class SlurmCommands(ClusterCommands):
 	def __init__(self, scontrol_bin='/usr/bin/scontrol'):
 		if not os.access(scontrol_bin, os.X_OK):
 			raise AssertionError(
-				"%s is not executable or does not exist." % scontrol_bin)
+				f"{scontrol_bin} is not executable or does not exist.")
 		self.scontrol_bin = scontrol_bin
 		self.scontrol_cmd = self.scontrol_bin + ' -a show node "%s"'
 
 	def get_node_status(self, nodename):
 		(child_stdin, child_stdout) = os.popen2(
-			'%s "%s"' % (self.scontrol_cmd, nodename))
+			f'{self.scontrol_cmd} "{nodename}"')
 		return self.parse_slurm_output(child_stdout)[nodename]
 
 	def get_nodes_status(self, nodelist):
@@ -145,11 +145,11 @@ class SlurmCommands(ClusterCommands):
 
 	def check_nodes_in_use(self, nodelist=[]):
 		if len(nodelist) == 0:
-			(child_stdin, child_stdout) = os.popen2('%s show node' % self.scontrol_bin)
+			(child_stdin, child_stdout) = os.popen2(f'{self.scontrol_bin} show node')
 			nodestatus = self.parse_slurm_output(child_stdout)
 		else:
 			nodestatus = self.get_nodes_status(nodelist)
-		for (node, state) in nodestatus.iteritems():
+		for (node, state) in nodestatus.items():
 			if state.find('ALLOC') < 0 and (state.find('DRAIN') >= 0 or state.find('DOWN') >= 0):
 				nodestatus[node] = False
 			else:
@@ -159,21 +159,16 @@ class SlurmCommands(ClusterCommands):
 	def mark_nodes_for_maint(self, comment, nodelist):
 		comment = comment.replace('"', '\\"')
 		nodelist = ' '.join(nodelist).replace('"', '\\"')
-		cmd = '%s update NodeName="%s" State="DRAIN" Reason="%s"' % (
-                    self.scontrol_bin,
-                    nodelist,
-                    comment)
+		cmd = f'{self.scontrol_bin} update NodeName="{nodelist}" State="DRAIN" Reason="{comment}"'
 		cmd_result = os.system(cmd)
 		return cmd_result
 
 	def mark_nodes_available(self, nodelist, comment=''):
 		comment = comment.replace('"', '\\"')
 		nodelist = ' '.join(nodelist).replace('"', '\\"')
-		cmd = '%s update NodeName="%s" State="RESUME"' % (
-                    self.scontrol_bin,
-                    nodelist)
+		cmd = f'{self.scontrol_bin} update NodeName="{nodelist}" State="RESUME"'
 		if comment != '':
-			cmd += ' Reason="%s"' % (comment,)
+			cmd += f' Reason="{comment}"'
 		return os.system(cmd)
 
 	def parse_slurm_output(self, fhandle):
