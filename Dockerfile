@@ -10,7 +10,7 @@ RUN pip3 install python-hostlist
 
 COPY . /app
 
-RUN cd /app && python setup.py install --root=/
+RUN cd /app && python3 setup.py install --root=/
 
 
 CMD master
