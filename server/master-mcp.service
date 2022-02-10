@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/sbin/mcp
-Type=simple
+Type=forking
 PIDFile=/var/run/mcp.pid
 
 [Install]
