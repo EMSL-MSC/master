@@ -101,7 +101,7 @@ def main():
 	optlist, args = getopt.getopt(sys.argv[1:], "c:t:m:vdh")
 
 	if args:
-		print("Extra Arguments Given:" + args)
+		print(f"Extra Arguments Given: {args}")
 		return
 
 	for (arg, val) in optlist:

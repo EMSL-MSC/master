@@ -3,9 +3,8 @@ Description=Run the Sark Tool as part of the master project
 After=network.target
 
 [Service]
-ExecCondition=/bin/test -e /etc/mcp.cong
--ExecStartPre=/sbin/modprobe eeprom
-ExecStart=/usr/bin/sark >> /var/log/sark.log 2>&1
+ExecStartPre=/sbin/modprobe eeprom
+ExecStart=/usr/bin/sark
 Type=oneshot
 
 [Install]
