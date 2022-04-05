@@ -1,0 +1,17 @@
+FROM rockylinux:8
+LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
+
+#ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
+#ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
+
+RUN dnf install -y python3 python3-pip rpm-build python3-devel postgresql-devel gcc
+RUN pip3 install --upgrade pip
+RUN pip3 install service_identity
+RUN pip3 install Twisted
+RUN pip3 install python-hostlist
+RUN pip3 install PyGreSQL
+RUN pip3 install pexpect
+
+COPY . /app
+
+CMD cd /app && python3 setup.py bdist_rpm

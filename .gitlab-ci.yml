@@ -36,6 +36,18 @@ build-centos7:
   tags:
     - docker
 
+build-rocky8:
+  stage: build
+  script:
+    - docker build -t master-rocky-build . -f Dockerfile.build.rocky8
+    - docker run -v `pwd`:/app/dist master-rocky-build
+  artifacts:
+    paths:
+      - ./*.rpm
+    expire_in: 1 week
+  tags:
+    - docker
+
 build-ubuntu2004:
   stage: build
   script:
@@ -48,4 +60,6 @@ build-ubuntu2004:
   tags:
     - docker
 
-include: https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy.yml
+include:
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy.yml
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy-8.yml
