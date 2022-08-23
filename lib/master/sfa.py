@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # This file is part of the MASTER project and is subject to the terms and conditions defined in
 # file 'LICENSE', which is part of this source code package.
@@ -36,6 +36,13 @@ _sepProps = (
     "Location",
     "SerialNumber",
 )
+_internalDiskProps = {
+	"HealthState",
+	"Model",
+	"SerialNumber",
+	"Version",
+	"Fault",
+}
 _diskProps = (
 	"HealthState",
 	"DiskHealthState",
@@ -77,6 +84,8 @@ _controllerProps = (
 	"Manufacturer",
 	"Primary",
 	"State",
+	"Name",
+	"SerialNumber",
 )
 _upsProps = (
 	"ACFailure",
@@ -90,6 +99,7 @@ _upsProps = (
 	"Present",
 	"SerialNumber",
 	"UPSFailure",
+	"WarningStatus",
 )
 _powerProps = (
 	"ACFailure",
@@ -117,12 +127,25 @@ _fanProps = (
 	"Present",
 )
 _poolProps = (
-	"Critical",
 	"HealthState",
 	"NumDisks",
-	"Rebuilding",
+	"RebuildJobsPresent",
+	"MemberCount",
 )
-
+_virtualdiskProps = {
+	"BadBlockCount",
+	"HealthState",
+	"RebuildJobsPresent",
+	"MemberCount",
+	"State",
+}
+_vitualmachineProps = {
+	"CoreCount",
+	"HealthState",
+	"Image",
+	"IOCMACAddresses",
+	"IsRunning",
+}
 
 def main():
 	s = SFAController.getAll()
@@ -131,13 +154,15 @@ def main():
 
 
 def dumpKeys():
-	for c in (SFAController, SFADiskDrive, SFADiskSlot, SFAEnclosure, SFAExpander, SFAFan, SFAPowerSupply, SFAStoragePool, SFAStorageSystem, SFAUPS):
+	for c in (SFAController, SFADiskDrive, SFADiskSlot, SFAEnclosure, SFAExpander, SFAFan, SFAPowerSupply, SFAStoragePool, SFAStorageSystem, SFAUPS,SFAInternalDiskDrive,SFAVirtualDisk,SFAVirtualMachine):
 		print(c)
 		item = c.getAll()[0]
 		keys = item.cimProps
 		for key in sorted(keys.keys()):
 			try:
 				print("  %-40s   %s" % (key, item.__getattribute__(key)))
+			except AttributeError as msg:
+				print("  ", key, msg)
 			except APIClientException as msg:
 				print("  ", key, msg)
 		print("\f")
@@ -164,7 +189,6 @@ def dumpPools():
 		p = "pool." + str(item.Name)
 		d.update(dumpProps(p, item, _poolProps))
 	return d
-
 
 def dumpDisks():
 	d = {}
@@ -210,7 +234,10 @@ def gatherSFAInfo(hostlist, user, password):
 			d.update(dumpEncPart(SFAFan, "fan", _fanProps))
 			d.update(dumpEncPart(SFAExpander, "expander", _expanderProps))
 			d.update(dumpEncPart(SFASEP, "sep", _sepProps))
+			d.update(dumpEncPart(SFAInternalDiskDrive,"internaldisk",_internalDiskProps))
 			d.update(dumpPools())
+			d.update(dumpSimple(SFAVirtualDisk,"virtualdisk",_virtualdiskProps))
+			d.update(dumpSimple(SFAVirtualMachine,"virtualmachine",_vitualmachineProps))
 			break
 		except APIException as msg:
 			print("Error", msg)
@@ -220,19 +247,24 @@ def gatherSFAInfo(hostlist, user, password):
 
 
 if __name__ == "__main__":
-	APIConnect("https://sfa12k-1-0", auth=("user", "user"))
+	#APIConnect("https://172.22.128.43", auth=("user", "user"))
 	# main()
-	dumpSimple(SFAEnclosure, "enclosure", _enclosureProps)
-	dumpSimple(SFAController, "controller", _controllerProps)
-	dumpSimple(SFAStorageSystem, "system", _systemProps)
-	dumpDisks()
-	dumpEncPart(SFADiskSlot, "slot", _slotProps)
-	dumpEncPart(SFAUPS, "ups", _upsProps)
-	dumpEncPart(SFAPowerSupply, "power", _powerProps)
-	dumpEncPart(SFAFan, "fan", _fanProps)
-	dumpEncPart(SFAExpander, "expander", _expanderProps)
-	dumpEncPart(SFASEP, "sep", _sepProps)
-	dumpPools()
-
-	# dumpKeys()
+	#dumpSimple(SFAEnclosure, "enclosure", _enclosureProps)
+	#dumpSimple(SFAController, "controller", _controllerProps)
+	#dumpSimple(SFAStorageSystem, "system", _systemProps)
+	#dumpDisks()
+	#dumpEncPart(SFADiskSlot, "slot", _slotProps)
+	#dumpEncPart(SFAUPS, "ups", _upsProps)
+	#dumpEncPart(SFAPowerSupply, "power", _powerProps)
+	#dumpEncPart(SFAFan, "fan", _fanProps)
+	#dumpEncPart(SFAExpander, "expander", _expanderProps)
+	#dumpEncPart(SFASEP, "sep", _sepProps)
+	#dumpPools()
+	#dumpEncPart(SFAInternalDiskDrive,"internaldisk",_internalDiskProps)
+	#dumpSimple(SFAVirtualDisk,"virtualdisk",_virtualdiskProps)
+	#dumpSimple(SFAVirtualMachine,"virtualmachine",_vitualmachineProps)
+			#dumpKeys()
+	d=gatherSFAInfo(["172.22.128.43","172.22.128.44"],"user","user")
+	for k,v in d.items():
+		print(k,":",v)
 	APIDisconnect()

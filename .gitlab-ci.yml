@@ -16,6 +16,7 @@ docker-image:
     - docker
     - k8s
   script:
+    - while true; do docker version > /dev/null && break; sleep 1; done
     - docker build -t $CI_REGISTRY_IMAGE/$CI_JOB_NAME . -f Dockerfile
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
     - docker push $CI_REGISTRY_IMAGE/$CI_JOB_NAME
@@ -27,6 +28,7 @@ docker-image:
 build-centos7:
   stage: build
   script:
+    - while true; do docker version > /dev/null && break; sleep 1; done
     - docker build -t master-build7 . -f Dockerfile.build
     - docker run -v `pwd`:/app/dist master-build7
   artifacts:
@@ -39,6 +41,7 @@ build-centos7:
 build-rocky8:
   stage: build
   script:
+    - while true; do docker version > /dev/null && break; sleep 1; done
     - docker build -t master-rocky-build . -f Dockerfile.build.rocky8
     - docker run -v `pwd`:/app/dist master-rocky-build
   artifacts:
@@ -51,6 +54,7 @@ build-rocky8:
 build-ubuntu2004:
   stage: build
   script:
+    - while true; do docker version > /dev/null && break; sleep 1; done
     - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
     - docker run -v `pwd`:/app/dist master-ubuntu-build
   artifacts:
