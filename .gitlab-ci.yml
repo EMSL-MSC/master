@@ -54,6 +54,7 @@ build-rocky8:
 build-ubuntu2004:
   stage: build
   script:
+    - while true; do docker version > /dev/null && break; sleep 1; done
     - docker build -t master-ubuntu-build . -f Dockerfile.build.dpkg
     - docker run -v `pwd`:/app/dist master-ubuntu-build
   artifacts:
