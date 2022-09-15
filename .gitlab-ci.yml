@@ -59,6 +59,7 @@ build-rocky9:
   script:
     - echo $CI_PROJECT_DIR
     - echo /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
+    - sleep 600
     - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
   artifacts:
     paths:
