@@ -58,7 +58,7 @@ build-rocky9:
       entrypoint: [""]
   script:
     - echo $CI_PROJECT_DIR
-    - ls $CI_PROJECT_DIR
+    - echo /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
     - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
   artifacts:
     paths:
