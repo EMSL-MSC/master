@@ -57,6 +57,8 @@ build-rocky9:
       name: gcr.io/kaniko-project/executor:debug
       entrypoint: [""]
   script:
+    - echo $CI_PROJECT_DIR
+    - ls $CI_PROJECT_DIR
     - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
   artifacts:
     paths:
