@@ -51,6 +51,20 @@ build-rocky8:
   tags:
     - docker
 
+build-rocky9:
+  stage: build
+  image:
+      name: gcr.io/kaniko-project/executor:debug
+      entrypoint: [""]
+  script:
+    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
+  artifacts:
+    paths:
+      - /app/dist
+    expire_in: 1 week
+  tags:
+    - k8s
+
 build-ubuntu2004:
   stage: build
   script:
