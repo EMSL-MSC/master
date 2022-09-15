@@ -63,7 +63,7 @@ build-rocky9:
     - find /app
   artifacts:
     paths:
-      - /app/dist/*.rpm
+      - dist/*.rpm
     expire_in: 1 week
   tags:
     - k8s
