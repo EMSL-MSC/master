@@ -59,11 +59,11 @@ build-rocky9:
   script:
     - echo $CI_PROJECT_DIR
     - ls $CI_PROJECT_DIR
-    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push
-    - find /app
+    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push --single-snapshot
+    - find /workspace
   artifacts:
     paths:
-      - dist/*.rpm
+      - $CI_PROJECT_DIR/dist/*.rpm
     expire_in: 1 week
   tags:
     - k8s
