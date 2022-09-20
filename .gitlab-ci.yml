@@ -59,8 +59,7 @@ build-rocky9:
   script:
     - echo $CI_PROJECT_DIR
     - ls $CI_PROJECT_DIR
-    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push --single-snapshot
-    - find /workspace
+    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push --single-snapshot --build-arg=DIR=$CI_PROJECT_DIR
   artifacts:
     paths:
       - $CI_PROJECT_DIR/dist/*.rpm
