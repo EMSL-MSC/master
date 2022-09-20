@@ -57,8 +57,6 @@ build-rocky9:
       name: gcr.io/kaniko-project/executor:v1.9.0-debug
       entrypoint: [""]
   script:
-    - echo $CI_PROJECT_DIR
-    - ls $CI_PROJECT_DIR
     - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push --single-snapshot --build-arg=DIR=$CI_PROJECT_DIR
   artifacts:
     paths:
@@ -83,3 +81,4 @@ build-ubuntu2004:
 include:
     - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy.yml
     - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy-8.yml
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy-9.yml
