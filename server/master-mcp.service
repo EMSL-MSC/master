@@ -3,9 +3,8 @@ Description=Run the Master Control Program(MCP) as part of the master project
 After=network.target
 
 [Service]
-ExecStart=/usr/sbin/mcp
-Type=forking
-PIDFile=/var/run/mcp.pid
+ExecStart=/usr/sbin/mcp --debug
+Type=simple
 
 [Install]
 WantedBy=multi-user.target
