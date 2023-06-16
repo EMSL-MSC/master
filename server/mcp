@@ -813,12 +813,12 @@ def main():
   m.putSubHandler('master', MasterXMLRPCServer())
   xmlrpc.addIntrospection(m)
   root = resource.Resource()
-  root.putChild("RPC2", m)
+  root.putChild(b"RPC2", m)
 
   # if we are configure to have a web interface create the resources and put it in the web directory
   if master.config["web_interface"] == True:
-    root.putChild("web", MasterWebServer())
-    root.putChild("", ForwardToWeb())
+    root.putChild(b"web", MasterWebServer())
+    root.putChild(b"", ForwardToWeb())
 
   # go
   #reactor.listenTCP(master.config["mcp_port"], server.Site(root))
