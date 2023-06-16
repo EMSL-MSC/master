@@ -81,7 +81,7 @@ mcp_bin_dirs.write(
 	f'#!/bin/sh\nexport MASTER_BIN_DIR={binDir}\nexport MASTER_SBIN_DIR={sbinDir}\n')
 mcp_bin_dirs.close()
 
-setup(name='master', version='1.0',
+setup(name='master', version='1.1',
       author="Evan Felix",
       author_email="e@pnl.gov",
       description="An asset managment system, designed to watch the cluster and also manage its state",
