@@ -1,6 +1,6 @@
 FROM rockylinux:9
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
-ARG DIR=/workspace
+ARG DIR=/app
 
 #ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
 #ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
@@ -11,5 +11,5 @@ RUN pip3 install service_identity Twisted python-hostlist PyGreSQL pexpect
 
 RUN cd $DIR && python3 setup.py bdist_rpm
 RUN mkdir /output
-RUN ls /app/dist
-RUN cd /app && cp -a dist /output
+RUN ls $DIR/dist
+RUN cd $DIR && cp -a dist /output
