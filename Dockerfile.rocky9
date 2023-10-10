@@ -10,3 +10,4 @@ RUN pip3 install --upgrade pip
 RUN pip3 install service_identity Twisted python-hostlist PyGreSQL pexpect
 
 RUN cd $DIR && python3 setup.py bdist_rpm
+RUN cp -a /app/dist /output
