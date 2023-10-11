@@ -16,8 +16,8 @@ RUN pip3 install pexpect
 COPY . /app
 
 RUN cd /app && python3 setup.py bdist_rpm
-RUN mkdir $DIR/output
+RUN mkdir -p $DIR/output
 RUN ls $DIR/output
 RUN cd /app && cp -a dist $DIR/output
 RUN ls $DIR/output
-CMD cp -a $DIR/output/* /output
+CMD cp -a /build/output/* /output

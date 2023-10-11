@@ -10,8 +10,8 @@ RUN yum install -y python36 rpm-build python-hostlist python-twisted-core python
 COPY . /app
 
 RUN cd /app && python3 setup.py bdist_rpm
-RUN mkdir $DIR/output
+RUN mkdir -p $DIR/output
 RUN ls $DIR/output
 RUN cd /app && cp -a dist $DIR/output
 RUN ls $DIR/output
-CMD cp -a $DIR/output/* /output
+CMD cp -a /build/output/* /output
