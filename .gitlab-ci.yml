@@ -25,45 +25,6 @@ docker-image:
   only:
     - master
 
-build-centos7:
-  stage: build
-  script:
-    - while true; do docker version > /dev/null && break; sleep 1; done
-    - docker build -t master-build7 . -f Dockerfile.build
-    - docker run -v `pwd`:/app/dist master-build7
-  artifacts:
-    paths:
-      - ./*.rpm
-    expire_in: 1 week
-  tags:
-    - docker
-
-build-rocky8:
-  stage: build
-  script:
-    - while true; do docker version > /dev/null && break; sleep 1; done
-    - docker build -t master-rocky-build . -f Dockerfile.build.rocky8
-    - docker run -v `pwd`:/app/dist master-rocky-build
-  artifacts:
-    paths:
-      - ./*.rpm
-    expire_in: 1 week
-  tags:
-    - docker
-
-build-rocky9:
-  stage: build
-  image:
-      name: gcr.io/kaniko-project/executor:v1.9.0-debug
-      entrypoint: [""]
-  script:
-    - /kaniko/executor --context dir://$CI_PROJECT_DIR/ --dockerfile $CI_PROJECT_DIR/Dockerfile.build.rocky9 --no-push --single-snapshot --build-arg=DIR=$CI_PROJECT_DIR
-  artifacts:
-    paths:
-      - $CI_PROJECT_DIR/dist/*.rpm
-    expire_in: 1 week
-  tags:
-    - k8s
 
 build-ubuntu2004:
   stage: build
@@ -79,6 +40,6 @@ build-ubuntu2004:
     - docker
 
 include:
-    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy.yml
-    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy-8.yml
-    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-deploy-9.yml
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact.yml
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-8.yml
+    - https://gitlab.emsl.pnl.gov/msc_ops/build/build-common/raw/master/k8s-artifact-9.yml

@@ -1,5 +1,6 @@
 FROM rockylinux:8
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
+ARG DIR=/build
 
 #ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
 #ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
@@ -14,4 +15,7 @@ RUN pip3 install pexpect
 
 COPY . /app
 
-CMD cd /app && python3 setup.py bdist_rpm
+RUN cd /app && python3 setup.py bdist_rpm
+RUN mkdir -p $DIR/output
+RUN cd /app && cp -a dist $DIR/output
+CMD cp -a /build/output/* /output
