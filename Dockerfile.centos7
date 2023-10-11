@@ -12,3 +12,4 @@ RUN cd /app && python3 setup.py bdist_rpm
 RUN mkdir /output
 RUN ls /app/dist
 RUN cd /app && cp -a dist /output
+RUN ls /output
