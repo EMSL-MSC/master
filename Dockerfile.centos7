@@ -1,5 +1,6 @@
 FROM centos:7
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
+ARG DIR=/
 
 #ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
 #ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
@@ -9,7 +10,7 @@ RUN yum install -y python36 rpm-build python-hostlist python-twisted-core python
 COPY . /app
 
 RUN cd /app && python3 setup.py bdist_rpm
-RUN mkdir /output
-RUN ls /app/dist
-RUN cd /app && cp -a dist /output
-RUN ls /output
+RUN mkdir $DIR/output
+RUN ls $DIR/output
+RUN cd /app && cp -a dist $DIR/output
+RUN ls $DIR/output
