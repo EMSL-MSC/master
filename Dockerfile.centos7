@@ -1,6 +1,6 @@
 FROM centos:7
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
-ARG DIR=/
+ARG DIR=/build
 
 #ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
 #ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
@@ -14,3 +14,4 @@ RUN mkdir $DIR/output
 RUN ls $DIR/output
 RUN cd /app && cp -a dist $DIR/output
 RUN ls $DIR/output
+CMD cp -a $DIR/output/* /output

@@ -9,7 +9,11 @@ RUN dnf install -y python3 python3-pip rpm-build python3-devel postgresql-devel 
 RUN pip3 install --upgrade pip
 RUN pip3 install service_identity Twisted python-hostlist PyGreSQL pexpect
 
-RUN cd $DIR && python3 setup.py bdist_rpm
-RUN mkdir /output
-RUN ls $DIR/dist
-RUN cd $DIR && cp -a dist /output
+COPY . /app
+
+RUN cd /app && python3 setup.py bdist_rpm
+RUN mkdir $DIR/output
+RUN ls $DIR/output
+RUN cd /app && cp -a dist $DIR/output
+RUN ls $DIR/output
+CMD cp -a $DIR/output/* /output
