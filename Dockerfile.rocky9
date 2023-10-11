@@ -1,6 +1,6 @@
 FROM rockylinux:9
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
-ARG DIR=/app
+ARG DIR=/build
 
 #ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
 #ENV NO_PROXY="*.pnl.gov,*.pnnl.gov,127.0.0.1"
