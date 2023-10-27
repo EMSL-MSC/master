@@ -159,7 +159,7 @@ def main():
 			print("Processing:", hsv)
 
 		# check to see if node exists:
-		nodes = mcp.master.getNodes([hsv])
+		nodes = mcp.master.getNodes(hsv)
 		if len(nodes) == 0:
 			print(f"hsv node: {hsv} does not exist in database")
 			continue

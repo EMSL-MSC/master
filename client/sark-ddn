@@ -12,7 +12,10 @@ import getopt
 import sys
 import xmlrpc.client
 import os
-import master.ef
+try:
+	import master.ef
+except:
+	pass
 import master.sfa
 import master
 
@@ -104,7 +107,7 @@ def main():
 			print("Processing:", arr)
 
 		# check to see if node exists:
-		nodes = mcp.master.getNodes([arr])
+		nodes = mcp.master.getNodes(arr)
 		if len(nodes) == 0:
 			print(f"Array node: {arr} does not exist in database")
 			continue
