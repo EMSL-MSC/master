@@ -90,6 +90,8 @@ def main():
 	myname = socket.gethostname().split(".")[0]
 
 	arrays = {}
+	if len(master.config["ddn_arrays"]) < 1:
+		exit(0)
 	for arr in master.config["ddn_arrays"].split(","):
 		hostlist = master.config[f"ddn_{arr}_hosts"].split(",")
 		user = master.config[f"ddn_{arr}_user"]
