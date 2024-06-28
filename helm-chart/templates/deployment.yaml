@@ -34,6 +34,15 @@ spec:
             - name: mcp
               containerPort: 627
               protocol: TCP
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 130.20.128.83
+              - 130.20.248.22
+            searches:
+              - pnl.gov
+              - emsl.pnl.gov
+              - compass.pnl.gov
           volumeMounts:
             - mountPath: /etc/mcp-priv.conf
               name: mcp-priv
