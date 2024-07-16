@@ -1,4 +1,4 @@
-FROM centos:7
+FROM gitlab.emsl.pnl.gov:4567/msc_ops/build/kitchen-kubernetes-images/yarm7
 LABEL org.opencontainers.image.authors="evan.felix@pnl.gov"
 ARG DIR=/build
 
