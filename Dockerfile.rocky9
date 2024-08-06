@@ -10,6 +10,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install service_identity Twisted python-hostlist PyGreSQL pexpect setuptools==53.0.0
 
 COPY . /app
+RUN sed -e 's/pexpect/python3-pexpect/' -i /app/setup.cfg
 
 RUN cd /app && python3 setup.py bdist_rpm
 RUN mkdir -p $DIR/output
