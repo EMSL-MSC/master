@@ -93,7 +93,6 @@ setup(name='master', version='1.4',
       scripts=thescripts,
       data_files=[('/etc/', ['misc/mcp.conf', 'misc/mcp-priv.conf',
                              'misc/mcp-bin-dirs.sh']), ('/usr/share/master/', ['server/master.sql', 'server/master-data.sql'])],
-      requires=['python3-hostlist'],
       cmdclass={
           'install_scripts': local_install_scripts,
           'build_scripts': local_build_scripts,
